@@ -149,9 +149,10 @@ that ratio comes out at a median of 14 and a 95th percentile of 43.
 Three columns are there because they are the three that hurt:
 
 - **`queue_wait_ms`** — time waiting for a slot rather than executing.
-  This moves long before p99 execution time does. It goes from 11ms at
-  low fan-out to 3.5 seconds average, 30 seconds worst, above 35
-  queries per question.
+  This moves long before p99 execution time does. Average queue wait
+  climbs 189ms, 562ms, 3,550ms across traces of 6-15, 16-35 and more
+  than 35 queries: a 19x increase driven purely by how many questions
+  one question became. Worst observed is 20.2 seconds.
 - **`silently_truncated`** — the result was cut short and the model was
   handed a partial answer without being told. About 2.3% of spans. This
   is where confident wrong answers come from.
