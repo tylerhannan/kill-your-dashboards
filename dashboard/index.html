@@ -7,20 +7,23 @@
 <!--
   A deliberately competent operator dashboard.
 
-  Every tile here is accurate. That is the point: this dashboard is not
+  Every figure here is accurate. That is the point: this dashboard is not
   wrong, it just cannot answer a question nobody built it for. On
   8 July 2026 a provider config push loosened hit frequency across ~50
   titles for twelve hours, and nothing on this screen finds it. The
-  "hit rate by provider" tile actively points the wrong way, because it
-  averages twelve broken hours with twelve normal ones and because that
-  provider's baseline is the lowest in the portfolio anyway.
+  "hit rate by provider" tile actively points the wrong way: it averages
+  twelve broken hours with twelve normal ones, and that provider's
+  baseline is the lowest in the portfolio anyway, so the culprit shows up
+  bottom of the list.
+
+  Note which tiles carry a day-versus-baseline comparison and which do
+  not. Payments and latency have one, because somebody worried about
+  payments and latency. Nobody worried about game providers.
 
   Two modes:
-    SNAPSHOT (default) — figures below are baked in from a real `small`
-                         tier build. No network, nothing to go wrong.
+    SNAPSHOT (default) — figures baked in from a real `small` tier build.
+                         No network, nothing to go wrong on stage.
     LIVE               — queries ClickHouse over its HTTP interface.
-                         Works against clickhouse-local's server or a
-                         local server; see the connect panel.
 -->
 <style>
   :root {
@@ -35,61 +38,47 @@
     --ink-3:     #8a8984;
     --series-1:  #2a78d6;
     --status-bad:#e34948;
-    --accent:    #FAFF69;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --surface-0: #121211;
-      --surface-1: #1a1a19;
-      --surface-2: #232322;
-      --border:    #33332f;
-      --grid:      #2b2b28;
-      --ink-1:     #ffffff;
-      --ink-2:     #c3c2b7;
-      --ink-3:     #8b8a80;
-      --series-1:  #3987e5;
-      --status-bad:#e66767;
+      --surface-0: #121211; --surface-1: #1a1a19; --surface-2: #232322;
+      --border: #33332f; --grid: #2b2b28;
+      --ink-1: #ffffff; --ink-2: #c3c2b7; --ink-3: #8b8a80;
+      --series-1: #3987e5; --status-bad: #e66767;
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --surface-0: #121211;
-    --surface-1: #1a1a19;
-    --surface-2: #232322;
-    --border:    #33332f;
-    --grid:      #2b2b28;
-    --ink-1:     #ffffff;
-    --ink-2:     #c3c2b7;
-    --ink-3:     #8b8a80;
-    --series-1:  #3987e5;
-    --status-bad:#e66767;
+    --surface-0: #121211; --surface-1: #1a1a19; --surface-2: #232322;
+    --border: #33332f; --grid: #2b2b28;
+    --ink-1: #ffffff; --ink-2: #c3c2b7; --ink-3: #8b8a80;
+    --series-1: #3987e5; --status-bad: #e66767;
   }
 
   * { box-sizing: border-box; }
   body {
-    margin: 0;
-    background: var(--surface-0);
-    color: var(--ink-1);
+    margin: 0; background: var(--surface-0); color: var(--ink-1);
     font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
   .wrap { max-width: 1400px; margin: 0 auto; padding: 20px 20px 48px; }
 
-  header { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 4px; }
+  header { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
   h1 { font-size: 19px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
   .sub { color: var(--ink-3); font-size: 13px; }
   .spacer { flex: 1 1 auto; }
+  .controls { display: flex; gap: 8px; align-items: center; }
 
-  .mode {
+  .chip {
     font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-    letter-spacing: 0.08em; padding: 5px 8px; border-radius: 4px;
-    border: 1px solid var(--border); color: var(--ink-2); background: var(--surface-2);
-    cursor: pointer;
+    letter-spacing: 0.08em; padding: 6px 9px; border-radius: 4px;
+    border: 1px solid var(--border); color: var(--ink-2);
+    background: var(--surface-2); cursor: pointer;
   }
-  .mode[data-live="1"] { color: var(--ink-1); border-color: var(--series-1); }
+  .chip[data-live="1"] { color: var(--ink-1); border-color: var(--series-1); }
 
-  .grid { display: grid; gap: 12px; margin-top: 16px; }
+  .grid { display: grid; gap: 12px; margin-top: 14px; }
   .kpis { grid-template-columns: repeat(4, 1fr); }
   .halves { grid-template-columns: 1fr 1fr; }
   @media (max-width: 900px) { .kpis, .halves { grid-template-columns: 1fr; } }
@@ -98,58 +87,67 @@
     background: var(--surface-1); border: 1px solid var(--border);
     border-radius: 8px; padding: 14px 16px 16px; min-width: 0;
   }
-  .card h2 {
-    font-size: 12px; font-weight: 650; margin: 0 0 2px; color: var(--ink-1);
-    letter-spacing: 0.01em;
-  }
+  .card h2 { font-size: 12px; font-weight: 650; margin: 0 0 2px; }
   .card .note { font-size: 11.5px; color: var(--ink-3); margin: 0 0 10px; }
 
-  .kpi .v { font: 650 27px/1.1 -apple-system, Inter, Arial, sans-serif; letter-spacing: -0.02em; margin-top: 6px; }
-  .kpi .d { font-size: 12px; color: var(--ink-2); margin-top: 5px; }
+  /* Proportional figures on the hero numbers; tabular only where digits
+     stack vertically (axis ticks, table columns). */
+  .kpi .v { font: 650 27px/1.1 -apple-system, Inter, Arial, sans-serif;
+            letter-spacing: -0.02em; margin-top: 4px; }
+  .kpi .d { font-size: 12px; color: var(--ink-2); margin-top: 4px; }
   .kpi .d .arrow { font-weight: 700; }
   .kpi .d.bad { color: var(--status-bad); }
+  .kpi .spark { margin-top: 8px; height: 30px; }
+
+  .legend { display: flex; gap: 14px; font-size: 11px; color: var(--ink-2); margin: 0 0 8px; }
+  .legend span { display: inline-flex; gap: 5px; align-items: center; }
+  .swatch { width: 9px; height: 9px; border-radius: 50%; background: var(--series-1); }
+  .swatch.base { background: transparent; border: 1.5px solid var(--ink-3); }
 
   table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-  th, td { text-align: right; padding: 6px 6px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+  th, td { text-align: right; padding: 6px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
   th:first-child, td:first-child { text-align: left; }
-  th { color: var(--ink-3); font-weight: 600; font-size: 11px; letter-spacing: 0.03em; text-transform: uppercase; }
+  th { color: var(--ink-3); font-weight: 600; font-size: 11px;
+       letter-spacing: 0.03em; text-transform: uppercase; }
   tbody tr:last-child td { border-bottom: none; }
-  td.num { font-variant-numeric: tabular-nums; }
+  td.num, th.num { font-variant-numeric: tabular-nums; }
   .scroll { overflow-x: auto; }
 
   svg { display: block; width: 100%; overflow: visible; }
   .gridline { stroke: var(--grid); stroke-width: 1; }
-  .axis { fill: var(--ink-3); font-size: 10.5px; }
-  .barlabel { fill: var(--ink-2); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .axis { fill: var(--ink-3); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+  .vlabel { fill: var(--ink-2); font-size: 11px; font-variant-numeric: tabular-nums; }
   .catlabel { fill: var(--ink-2); font-size: 11.5px; }
-  .zeroline { stroke: var(--ink-3); stroke-width: 1; opacity: 0.55; }
+  .zeroline { stroke: var(--ink-3); stroke-width: 1; opacity: 0.5; }
+  .connector { stroke: var(--ink-3); stroke-width: 1.5; opacity: 0.45; }
+
+  /* The table view the accessibility pass requires. */
+  .tableview { display: none; margin-top: 12px; }
+  body.show-tables .tableview { display: block; }
+  .tableview caption { text-align: left; font-size: 11px; color: var(--ink-3);
+                       padding-bottom: 4px; }
 
   .tip {
     position: fixed; pointer-events: none; opacity: 0; transition: opacity .08s;
-    background: var(--surface-1); color: var(--ink-1);
-    border: 1px solid var(--border); border-radius: 6px;
-    padding: 7px 9px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.18);
-    z-index: 50; font-variant-numeric: tabular-nums; max-width: 260px;
+    background: var(--surface-1); color: var(--ink-1); border: 1px solid var(--border);
+    border-radius: 6px; padding: 7px 9px; font-size: 12px;
+    box-shadow: 0 4px 14px rgba(0,0,0,.18); z-index: 50;
+    font-variant-numeric: tabular-nums; max-width: 280px;
   }
   .tip b { font-weight: 650; }
   .tip .k { color: var(--ink-3); }
 
-  .connect {
-    margin-top: 16px; background: var(--surface-1); border: 1px solid var(--border);
-    border-radius: 8px; padding: 14px 16px;
-  }
+  .connect { margin-top: 16px; background: var(--surface-1);
+             border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
   .connect h2 { font-size: 12px; margin: 0 0 8px; }
   .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  input {
-    background: var(--surface-2); color: var(--ink-1); border: 1px solid var(--border);
-    border-radius: 5px; padding: 6px 8px; font: 12px ui-monospace, Menlo, monospace;
-  }
-  button {
-    background: var(--series-1); color: #fff; border: 0; border-radius: 5px;
-    padding: 7px 12px; font: 600 12px/1 inherit; cursor: pointer;
-  }
+  input { background: var(--surface-2); color: var(--ink-1); border: 1px solid var(--border);
+          border-radius: 5px; padding: 6px 8px; font: 12px ui-monospace, Menlo, monospace; }
+  button { background: var(--series-1); color: #fff; border: 0; border-radius: 5px;
+           padding: 7px 12px; font: 600 12px/1 inherit; cursor: pointer; }
   button.ghost { background: var(--surface-2); color: var(--ink-1); border: 1px solid var(--border); }
-  .status { font: 11.5px/1.4 ui-monospace, Menlo, monospace; color: var(--ink-3); margin-top: 8px; white-space: pre-wrap; }
+  .status { font: 11.5px/1.4 ui-monospace, Menlo, monospace; color: var(--ink-3);
+            margin-top: 8px; white-space: pre-wrap; }
   label.chk { font-size: 12px; color: var(--ink-2); display: inline-flex; gap: 6px; align-items: center; }
   .foot { margin-top: 18px; color: var(--ink-3); font-size: 11.5px; }
 </style>
@@ -158,51 +156,63 @@
 <div class="wrap">
   <header>
     <h1>Trading dashboard</h1>
-    <span class="sub" id="asof">8 July 2026 &middot; all eight brands, all jurisdictions</span>
+    <span class="sub">8 July 2026 &middot; all eight brands, all jurisdictions</span>
     <span class="spacer"></span>
-    <button class="mode" id="modeBtn" data-live="0" title="Toggle light/dark">SNAPSHOT</button>
+    <div class="controls">
+      <label class="chk"><input type="checkbox" id="tables"> data tables</label>
+      <button class="chip" id="themeBtn" title="Toggle light and dark">THEME</button>
+      <button class="chip" id="modeChip" data-live="0" title="Data source">SNAPSHOT</button>
+    </div>
   </header>
 
   <div class="grid kpis" id="kpis"></div>
 
-  <div class="grid" style="margin-top:12px">
+  <div class="grid">
     <div class="card">
       <h2>Gross gaming revenue by day</h2>
       <p class="note">EUR, settled bets, all brands. 1 June &ndash; 31 August 2026.</p>
       <div id="ggrChart"></div>
+      <div class="tableview scroll" id="ggrTable"></div>
     </div>
   </div>
 
   <div class="grid halves">
     <div class="card">
       <h2>Hold by brand</h2>
-      <p class="note">GGR as a percentage of turnover, whole period.</p>
+      <p class="note">GGR as a percentage of turnover, whole period. Hold is a
+        long-run figure &mdash; a single brand-day is roughly ten thousand bets, where
+        one large win moves it by tens of points.</p>
       <div id="holdChart"></div>
+      <div class="tableview scroll" id="holdTable"></div>
     </div>
     <div class="card">
       <h2>Hit rate by provider &mdash; 8 July</h2>
       <p class="note">Share of casino bets returning any win. Cash play only.</p>
       <div id="hitChart"></div>
+      <div class="tableview scroll" id="hitTable"></div>
     </div>
   </div>
 
   <div class="grid halves">
     <div class="card">
       <h2>Deposit approval by provider</h2>
-      <p class="note">Approved as a percentage of attempts, whole period.</p>
+      <p class="note">8 July against the prior seven-day average. Axis is focused, not zero-based.</p>
       <div id="pspChart"></div>
+      <div class="tableview scroll" id="pspTable"></div>
     </div>
     <div class="card">
       <h2>Bet acceptance latency by brand</h2>
-      <p class="note">99th percentile, milliseconds.</p>
+      <p class="note">99th percentile, milliseconds. 8 July against the prior seven-day average.</p>
       <div id="latChart"></div>
+      <div class="tableview scroll" id="latTable"></div>
     </div>
   </div>
 
   <div class="grid">
     <div class="card">
       <h2>Top casino games by turnover &mdash; 8 July</h2>
-      <p class="note">Realised return to player against the advertised figure. Single-day samples are noisy by nature.</p>
+      <p class="note">Realised return to player against the advertised figure. One day of
+        one game is a few hundred bets, so these swing wildly in both directions by nature.</p>
       <div class="scroll"><table id="gamesTable"></table></div>
     </div>
   </div>
@@ -217,12 +227,11 @@
       <button class="ghost" id="snap">Back to snapshot</button>
       <label class="chk"><input type="checkbox" id="auto"> refresh every 5s</label>
     </div>
-    <div class="status" id="status">Snapshot mode. Figures baked in from a <code>small</code> tier build &mdash; no network needed.</div>
+    <div class="status" id="status">Snapshot mode. Figures baked in from a small tier build &mdash; no network needed.</div>
   </div>
 
   <p class="foot">
-    Every figure on this page is accurate. None of the tiles show what went wrong on 8 July.
-    See <code>DEMO.md</code>.
+    Every figure here is accurate. None of these tiles show what went wrong on 8 July. See <code>DEMO.md</code>.
   </p>
 </div>
 <div class="tip" id="tip" role="status" aria-live="polite"></div>
@@ -233,7 +242,12 @@
    ============================================================ */
 const SNAP = {
   kpi: { ggr: -122311, turnover: 2658260, bets: 84045, players: 1234,
-         ggr7: 137023, turnover7: 4922317 },
+         ggr7: 137023, turnover7: 4922317, bets7: 145819, players7: 1960 },
+  /* 1–8 July: day, ggr, turnover, bets, players. Drives the KPI sparklines. */
+  week: [["2026-07-01",443468,5031837,140075,1747],["2026-07-02",246415,4034583,138066,1742],
+         ["2026-07-03",270754,4297889,141381,1773],["2026-07-04",277524,5076650,193572,2251],
+         ["2026-07-05",-123073,5831911,188619,2267],["2026-07-06",-70224,5339997,162793,2012],
+         ["2026-07-07",-85705,4843351,156228,1929],["2026-07-08",-122311,2658260,84045,1234]],
   ggrByDay: [["2026-06-01",49582],["2026-06-02",81511],["2026-06-03",125305],["2026-06-04",74918],
     ["2026-06-05",38536],["2026-06-06",118496],["2026-06-07",-18873],["2026-06-08",127526],
     ["2026-06-09",98995],["2026-06-10",56040],["2026-06-11",274196],["2026-06-12",311046],
@@ -259,16 +273,18 @@ const SNAP = {
     ["2026-08-28",52968],["2026-08-29",63486],["2026-08-30",84177],["2026-08-31",-4046]],
   hold: [["Ironhorse",7.58],["Aurora Bet",7.13],["Bluepeak",7.08],["Casa Verde",6.09],
          ["Kestrel",6.08],["Northstar",5.97],["Vega Casino",5.97],["Tivoli Play",4.24]],
-  /* Sorted descending, uniform colour, no highlight. The dashboard does
-     not know which provider matters, and pretending otherwise would be
-     the straw man this page exists to avoid. */
+  /* Sorted descending, uniform hue, no highlight. The dashboard does not
+     know which provider matters, and pretending it does would be the
+     straw man this page exists to avoid. */
   hit: [["Sable Studios",34.33],["Atlas Originals",33.61],["Kite Interactive",32.39],
         ["Helix Studios",32.13],["Nordic Reels",31.37],["Lumen Live",30.32],
         ["Panther Gaming",29.89],["Redwood",28.13]],
-  psp: [["Baltic Pay",90.2],["Solaris Gateway",90.1],["Veritas PSP",90.1],
-        ["Northgate",90.0],["Corvus",89.7],["Meridian",89.7]],
-  lat: [["Kestrel",179],["Northstar",173],["Aurora Bet",172],["Ironhorse",167],
-        ["Bluepeak",161],["Casa Verde",161],["Vega Casino",159],["Tivoli Play",156]],
+  /* [name, 8 July, prior 7-day average] */
+  psp: [["Baltic Pay",94.81,90.30],["Veritas PSP",91.86,90.85],["Northgate",90.40,90.04],
+        ["Corvus",90.06,89.89],["Solaris Gateway",89.22,90.33],["Meridian",87.88,89.63]],
+  lat: [["Bluepeak",177,171],["Northstar",169,154],["Vega Casino",163,151],
+        ["Tivoli Play",163,162],["Casa Verde",161,153],["Aurora Bet",160,167],
+        ["Ironhorse",159,176],["Kestrel",156,156]],
   games: [["Velvet Kraken Deluxe","Redwood",120.6,92.5,2719],
           ["Sacred Reels Cash Drop","Atlas Originals",106.0,94.6,1013],
           ["Wild Anvil Megaways","Atlas Originals",117.2,92.6,940],
@@ -285,6 +301,7 @@ const tip = $("#tip");
 const NS = "http://www.w3.org/2000/svg";
 const el = (n, a = {}) => { const e = document.createElementNS(NS, n);
   for (const k in a) e.setAttribute(k, a[k]); return e; };
+const txt = (e, s) => { e.textContent = s; return e; };
 
 const eur = (v) => {
   const s = v < 0 ? "-" : "", a = Math.abs(v);
@@ -304,46 +321,80 @@ function showTip(html, ev) {
 }
 const hideTip = () => { tip.style.opacity = 0; };
 
-/* ---------- KPI row ---------- */
-function renderKpis(d) {
-  // A percentage change across a sign flip is meaningless: GGR going from
-  // +137k to -122k is not "down 189%", it is a swing of 259k. Report the
-  // absolute move whenever the two values straddle zero.
-  const delta = (a, b) => {
-    if (b === 0) return null;
-    const flipped = (a < 0) !== (b < 0);
-    return {
-      down: a < b,
-      // "down 189%" would be nonsense across a sign flip; "down" is also
-      // redundant once the phrasing is a swing, so drop the word too.
-      flipped: flipped,
-      text: flipped ? "a swing of " + eur(Math.abs(a - b))
-                    : Math.abs(((a - b) / Math.abs(b)) * 100).toFixed(0) + "%",
-    };
-  };
-  const items = [
-    { l: "GGR, 8 July", v: eur(d.ggr), d: delta(d.ggr, d.ggr7),
-      note: "vs " + eur(d.ggr7) + " 7-day average" },
-    { l: "Turnover, 8 July", v: eur(d.turnover), d: delta(d.turnover, d.turnover7),
-      note: "vs " + eur(d.turnover7) + " 7-day average" },
-    { l: "Settled bets", v: num(d.bets), d: null, note: "on the day" },
-    { l: "Active players", v: num(d.players), d: null, note: "placed at least one bet" },
-  ];
-  $("#kpis").innerHTML = items.map((i) => {
-    let sub = '<div class="d">' + i.note + "</div>";
-    if (i.d) {
-      // Arrow glyph and the word carry the direction; colour is secondary.
-      const word = i.d.flipped ? "" : (i.d.down ? "down " : "up ");
-      sub = '<div class="d' + (i.d.down ? " bad" : "") + '"><span class="arrow">' +
-        (i.d.down ? "▼" : "▲") + "</span> " + word +
-        i.d.text + " &middot; " + i.note + "</div>";
-    }
-    return '<div class="card kpi"><h2>' + i.l + '</h2><div class="v">' +
-      i.v + "</div>" + sub + "</div>";
-  }).join("");
+function dataTable(mount, caption, headers, rows) {
+  const t = document.createElement("table");
+  t.innerHTML = "<caption>" + caption + "</caption><thead><tr>" +
+    headers.map((h, i) => '<th' + (i ? ' class="num"' : "") + ">" + h + "</th>").join("") +
+    "</tr></thead><tbody>" + rows.map((r) => "<tr>" +
+      r.map((c, i) => "<td" + (i ? ' class="num"' : "") + ">" + c + "</td>").join("") +
+    "</tr>").join("") + "</tbody>";
+  mount.replaceChildren(t);
 }
 
-/* ---------- line chart, with crosshair ---------- */
+/* ---------- sparkline: a 30px trend, no axes, endpoint dot ---------- */
+function spark(series) {
+  const W = 200, H = 30, pad = 3;
+  const lo = Math.min(...series), hi = Math.max(...series);
+  const span = hi - lo || 1;
+  const X = (i) => pad + (i / (series.length - 1)) * (W - pad * 2);
+  const Y = (v) => H - pad - ((v - lo) / span) * (H - pad * 2);
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: "none",
+    "aria-hidden": "true" });
+  let d = "";
+  series.forEach((v, i) => { d += (i ? "L" : "M") + X(i) + " " + Y(v); });
+  if (lo < 0 && hi > 0) svg.appendChild(el("line", { class: "zeroline",
+    x1: pad, x2: W - pad, y1: Y(0), y2: Y(0) }));
+  svg.appendChild(el("path", { d, fill: "none", stroke: "var(--series-1)",
+    "stroke-width": 1.5, "stroke-linejoin": "round" }));
+  const n = series.length - 1;
+  svg.appendChild(el("circle", { cx: X(n), cy: Y(series[n]), r: 2.6,
+    fill: "var(--series-1)" }));
+  return svg;
+}
+
+/* ---------- KPI row ---------- */
+function renderKpis(d, week) {
+  // A percentage change across a sign flip is meaningless: GGR going from
+  // +137k to -122k is not "down 189%", it is a swing of 259k.
+  const delta = (a, b) => {
+    if (!b) return null;
+    const flipped = (a < 0) !== (b < 0);
+    return { down: a < b, flipped,
+      text: flipped ? "a swing of " + eur(Math.abs(a - b))
+                    : Math.abs(((a - b) / Math.abs(b)) * 100).toFixed(0) + "%" };
+  };
+  const items = [
+    { l: "GGR, 8 July", v: eur(d.ggr), d: delta(d.ggr, d.ggr7), col: 1,
+      note: "vs " + eur(d.ggr7) + " prior 7-day average" },
+    { l: "Turnover, 8 July", v: eur(d.turnover), d: delta(d.turnover, d.turnover7), col: 2,
+      note: "vs " + eur(d.turnover7) + " prior 7-day average" },
+    { l: "Settled bets", v: num(d.bets), d: delta(d.bets, d.bets7), col: 3,
+      note: "vs " + num(d.bets7) + " prior 7-day average" },
+    { l: "Active players", v: num(d.players), d: delta(d.players, d.players7), col: 4,
+      note: "vs " + num(d.players7) + " prior 7-day average" },
+  ];
+  const host = $("#kpis");
+  host.replaceChildren();
+  items.forEach((i) => {
+    const card = document.createElement("div");
+    card.className = "card kpi";
+    let sub = '<div class="d">' + i.note + "</div>";
+    if (i.d) {
+      const word = i.d.flipped ? "" : (i.d.down ? "down " : "up ");
+      sub = '<div class="d' + (i.d.down ? " bad" : "") + '"><span class="arrow">' +
+        (i.d.down ? "▼" : "▲") + "</span> " + word + i.d.text +
+        "</div><div class='d'>" + i.note + "</div>";
+    }
+    card.innerHTML = "<h2>" + i.l + '</h2><div class="v">' + i.v + "</div>" + sub;
+    const sp = document.createElement("div");
+    sp.className = "spark";
+    sp.appendChild(spark(week.map((r) => r[i.col])));
+    card.appendChild(sp);
+    host.appendChild(card);
+  });
+}
+
+/* ---------- line chart with crosshair ---------- */
 function renderLine(mount, rows) {
   const W = 1300, H = 250, ml = 62, mr = 16, mt = 10, mb = 26;
   const iw = W - ml - mr, ih = H - mt - mb;
@@ -356,30 +407,29 @@ function renderLine(mount, rows) {
 
   const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img",
     "aria-label": "Gross gaming revenue by day, 1 June to 31 August 2026" });
-
   for (let k = 0; k <= 4; k++) {
     const v = y0 + ((y1 - y0) * k) / 4, y = Y(v);
     svg.appendChild(el("line", { class: "gridline", x1: ml, x2: W - mr, y1: y, y2: y }));
-    const t = el("text", { class: "axis", x: ml - 8, y: y + 3.5, "text-anchor": "end" });
-    t.textContent = eur(v); svg.appendChild(t);
+    svg.appendChild(txt(el("text", { class: "axis", x: ml - 8, y: y + 3.5,
+      "text-anchor": "end" }), eur(v)));
   }
-  if (y0 < 0) svg.appendChild(el("line", { class: "zeroline", x1: ml, x2: W - mr, y1: Y(0), y2: Y(0) }));
+  if (y0 < 0) svg.appendChild(el("line", { class: "zeroline", x1: ml, x2: W - mr,
+    y1: Y(0), y2: Y(0) }));
 
-  let dpath = "";
-  rows.forEach((r, i) => { dpath += (i ? "L" : "M") + X(i) + " " + Y(r[1]); });
-  svg.appendChild(el("path", { d: dpath, fill: "none", stroke: "var(--series-1)",
+  let d = "";
+  rows.forEach((r, i) => { d += (i ? "L" : "M") + X(i) + " " + Y(r[1]); });
+  svg.appendChild(el("path", { d, fill: "none", stroke: "var(--series-1)",
     "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }));
 
   rows.forEach((r, i) => {
-    if (i % 14 === 0 || i === rows.length - 1) {
-      const t = el("text", { class: "axis", x: X(i), y: H - 6, "text-anchor": "middle" });
-      t.textContent = r[0].slice(5); svg.appendChild(t);
-    }
+    if (i % 14 === 0 || i === rows.length - 1)
+      svg.appendChild(txt(el("text", { class: "axis", x: X(i), y: H - 6,
+        "text-anchor": "middle" }), r[0].slice(5)));
   });
 
   const cross = el("line", { class: "gridline", y1: mt, y2: mt + ih, opacity: 0 });
-  const dot = el("circle", { r: 4.5, fill: "var(--series-1)", stroke: "var(--surface-1)",
-    "stroke-width": 2, opacity: 0 });
+  const dot = el("circle", { r: 4.5, fill: "var(--series-1)",
+    stroke: "var(--surface-1)", "stroke-width": 2, opacity: 0 });
   svg.appendChild(cross); svg.appendChild(dot);
 
   const hit = el("rect", { x: ml, y: mt, width: iw, height: ih, fill: "transparent" });
@@ -389,43 +439,35 @@ function renderLine(mount, rows) {
     const px = ((ev.clientX - box.left) / box.width) * W;
     let i = Math.round(((px - ml) / iw) * (rows.length - 1));
     i = Math.max(0, Math.min(rows.length - 1, i));
-    const [d, v] = rows[i];
-    cross.setAttribute("x1", X(i)); cross.setAttribute("x2", X(i)); cross.setAttribute("opacity", 1);
-    dot.setAttribute("cx", X(i)); dot.setAttribute("cy", Y(v)); dot.setAttribute("opacity", 1);
-    showTip("<b>" + d + "</b><br><span class='k'>GGR</span> " + eur(v), ev);
+    cross.setAttribute("x1", X(i)); cross.setAttribute("x2", X(i));
+    cross.setAttribute("opacity", 1);
+    dot.setAttribute("cx", X(i)); dot.setAttribute("cy", Y(rows[i][1]));
+    dot.setAttribute("opacity", 1);
+    showTip("<b>" + rows[i][0] + "</b><br><span class='k'>GGR</span> " + eur(rows[i][1]), ev);
   });
   hit.addEventListener("mouseleave", () => {
     cross.setAttribute("opacity", 0); dot.setAttribute("opacity", 0); hideTip();
   });
-
   mount.replaceChildren(svg);
 }
 
-/* ---------- horizontal bars, uniform hue, direct-labelled ---------- */
+/* ---------- horizontal bars, zero-based, uniform hue ---------- */
 function renderBars(mount, rows, fmt, label) {
-  const rowH = 26, gap = 2, ml = 118, mr = 58, W = 640;
-  const H = rows.length * rowH + 8;
-  const iw = W - ml - mr;
+  const rowH = 26, ml = 118, mr = 58, W = 640;
+  const H = rows.length * rowH + 8, iw = W - ml - mr;
   const hi = Math.max(...rows.map((r) => r[1]));
   const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": label });
-
   rows.forEach((r, i) => {
-    const y = 4 + i * rowH;
-    const bh = rowH - gap * 2 - 6;
+    const y = 4 + i * rowH, bh = rowH - 10;
     const w = Math.max(2, (r[1] / hi) * iw);
-
-    const cat = el("text", { class: "catlabel", x: ml - 10, y: y + bh / 2 + 4, "text-anchor": "end" });
-    cat.textContent = r[0]; svg.appendChild(cat);
-
-    // 4px rounded data-end, anchored to the baseline.
-    const bar = el("rect", { x: ml, y: y + 3, width: w, height: bh,
-      fill: "var(--series-1)", rx: 4 });
-    svg.appendChild(bar);
-
-    const val = el("text", { class: "barlabel", x: ml + w + 8, y: y + bh / 2 + 4 });
-    val.textContent = fmt(r[1]); svg.appendChild(val);
-
-    const hit = el("rect", { x: 0, y: y, width: W, height: rowH, fill: "transparent" });
+    svg.appendChild(txt(el("text", { class: "catlabel", x: ml - 10,
+      y: y + bh / 2 + 4, "text-anchor": "end" }), r[0]));
+    // 4px rounded data-end, anchored to a true zero baseline.
+    svg.appendChild(el("rect", { x: ml, y: y + 3, width: w, height: bh,
+      fill: "var(--series-1)", rx: 4 }));
+    svg.appendChild(txt(el("text", { class: "vlabel", x: ml + w + 8,
+      y: y + bh / 2 + 4 }), fmt(r[1])));
+    const hit = el("rect", { x: 0, y, width: W, height: rowH, fill: "transparent" });
     hit.addEventListener("mousemove", (ev) =>
       showTip("<b>" + r[0] + "</b><br><span class='k'>" + label + "</span> " + fmt(r[1]), ev));
     hit.addEventListener("mouseleave", hideTip);
@@ -434,43 +476,120 @@ function renderBars(mount, rows, fmt, label) {
   mount.replaceChildren(svg);
 }
 
+/* ---------- dumbbell: today against a baseline, focused axis ----------
+   Bars would be wrong here. Deposit approval spans 87.9% to 94.8% and
+   latency 156ms to 177ms; zero-based bars render both as eight identical
+   full-width blocks. A dot plot may use a focused axis where a bar may
+   not, so long as the range is stated — which the axis ticks do.        */
+function renderDumbbell(mount, rows, fmt, label, unit) {
+  const rowH = 28, ml = 118, mr = 66, mt = 6, W = 640;
+  const H = rows.length * rowH + mt + 22, iw = W - ml - mr;
+  const all = rows.flatMap((r) => [r[1], r[2]]);
+  const lo0 = Math.min(...all), hi0 = Math.max(...all);
+  const pad = (hi0 - lo0) * 0.18 || 1;
+  const lo = lo0 - pad, hi = hi0 + pad;
+  const X = (v) => ml + ((v - lo) / (hi - lo)) * iw;
+
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img",
+    "aria-label": label + ", 8 July against the prior seven-day average" });
+
+  // Focused-axis ticks, so the non-zero start is explicit.
+  [lo0, (lo0 + hi0) / 2, hi0].forEach((v) => {
+    svg.appendChild(el("line", { class: "gridline", x1: X(v), x2: X(v),
+      y1: mt, y2: mt + rows.length * rowH }));
+    svg.appendChild(txt(el("text", { class: "axis", x: X(v),
+      y: H - 6, "text-anchor": "middle" }), fmt(v)));
+  });
+
+  rows.forEach((r, i) => {
+    const y = mt + i * rowH + rowH / 2;
+    const [name, day, base] = r;
+    svg.appendChild(txt(el("text", { class: "catlabel", x: ml - 10, y: y + 4,
+      "text-anchor": "end" }), name));
+    svg.appendChild(el("line", { class: "connector", x1: X(base), x2: X(day), y1: y, y2: y }));
+    // Baseline: hollow ring. Today: filled. 2px surface ring keeps them
+    // legible where they overlap.
+    svg.appendChild(el("circle", { cx: X(base), cy: y, r: 4.5, fill: "var(--surface-1)",
+      stroke: "var(--ink-3)", "stroke-width": 1.5 }));
+    svg.appendChild(el("circle", { cx: X(day), cy: y, r: 5, fill: "var(--series-1)",
+      stroke: "var(--surface-1)", "stroke-width": 2 }));
+    // Label only the current value; the baseline is on the ring and in
+    // the tooltip and table.
+    svg.appendChild(txt(el("text", { class: "vlabel", x: W - mr + 8, y: y + 4 }), fmt(day)));
+    const hit = el("rect", { x: 0, y: y - rowH / 2, width: W, height: rowH, fill: "transparent" });
+    const diff = day - base;
+    hit.addEventListener("mousemove", (ev) => showTip(
+      "<b>" + name + "</b><br><span class='k'>8 July</span> " + fmt(day) +
+      "<br><span class='k'>prior 7-day</span> " + fmt(base) +
+      "<br><span class='k'>change</span> " + (diff >= 0 ? "+" : "") + fmt(diff), ev));
+    hit.addEventListener("mouseleave", hideTip);
+    svg.appendChild(hit);
+  });
+
+  const wrap = document.createElement("div");
+  const lg = document.createElement("div");
+  lg.className = "legend";
+  lg.innerHTML = '<span><i class="swatch"></i>8 July</span>' +
+                 '<span><i class="swatch base"></i>prior 7-day average</span>';
+  wrap.appendChild(lg); wrap.appendChild(svg);
+  mount.replaceChildren(wrap);
+}
+
 function renderGames(rows) {
-  const head = "<thead><tr><th>Game</th><th>Provider</th><th>Realised RTP</th>" +
-    "<th>Advertised</th><th>Bets</th></tr></thead>";
-  const body = rows.map((r) =>
-    "<tr><td>" + r[0] + "</td><td>" + r[1] + "</td>" +
-    '<td class="num">' + r[2].toFixed(1) + "%</td>" +
-    '<td class="num">' + r[3].toFixed(1) + "%</td>" +
-    '<td class="num">' + num(r[4]) + "</td></tr>").join("");
-  $("#gamesTable").innerHTML = head + "<tbody>" + body + "</tbody>";
+  $("#gamesTable").innerHTML =
+    "<thead><tr><th>Game</th><th>Provider</th><th class='num'>Realised RTP</th>" +
+    "<th class='num'>Advertised</th><th class='num'>Bets</th></tr></thead><tbody>" +
+    rows.map((r) => "<tr><td>" + r[0] + "</td><td>" + r[1] + "</td>" +
+      '<td class="num">' + r[2].toFixed(1) + "%</td><td class=\"num\">" +
+      r[3].toFixed(1) + '%</td><td class="num">' + num(r[4]) + "</td></tr>").join("") +
+    "</tbody>";
 }
 
 function renderAll(d) {
-  renderKpis(d.kpi);
+  renderKpis(d.kpi, d.week);
   renderLine($("#ggrChart"), d.ggrByDay);
   renderBars($("#holdChart"), d.hold, (v) => v.toFixed(2) + "%", "Hold");
   renderBars($("#hitChart"), d.hit, (v) => v.toFixed(2) + "%", "Hit rate");
-  renderBars($("#pspChart"), d.psp, (v) => v.toFixed(1) + "%", "Approved");
-  renderBars($("#latChart"), d.lat, (v) => Math.round(v) + " ms", "p99 latency");
+  renderDumbbell($("#pspChart"), d.psp, (v) => v.toFixed(2) + "%", "Deposit approval");
+  renderDumbbell($("#latChart"), d.lat, (v) => Math.round(v) + " ms", "p99 latency");
   renderGames(d.games);
+
+  dataTable($("#ggrTable"), "Gross gaming revenue by day (EUR)",
+    ["Date", "GGR"], d.ggrByDay.map((r) => [r[0], Math.round(r[1])]));
+  dataTable($("#holdTable"), "Hold by brand, whole period",
+    ["Brand", "Hold %"], d.hold.map((r) => [r[0], r[1].toFixed(2)]));
+  dataTable($("#hitTable"), "Hit rate by provider, 8 July",
+    ["Provider", "Hit rate %"], d.hit.map((r) => [r[0], r[1].toFixed(2)]));
+  dataTable($("#pspTable"), "Deposit approval by provider",
+    ["Provider", "8 July %", "Prior 7-day %", "Change"],
+    d.psp.map((r) => [r[0], r[1].toFixed(2), r[2].toFixed(2),
+      (r[1] - r[2] >= 0 ? "+" : "") + (r[1] - r[2]).toFixed(2)]));
+  dataTable($("#latTable"), "p99 bet acceptance latency by brand (ms)",
+    ["Brand", "8 July", "Prior 7-day", "Change"],
+    d.lat.map((r) => [r[0], Math.round(r[1]), Math.round(r[2]),
+      (r[1] - r[2] >= 0 ? "+" : "") + Math.round(r[1] - r[2])]));
 }
 
 /* ============================================================
-   Live mode.
-
-   ClickHouse's HTTP interface takes the query as a POST body. Sending it
-   as text/plain keeps it a "simple" CORS request, so no preflight, and
-   add_http_cors_header=1 makes ClickHouse return the CORS header.
+   Live mode. ClickHouse takes the query as a POST body; text/plain keeps
+   it a simple CORS request (no preflight) and add_http_cors_header=1
+   makes ClickHouse return the header.
    ============================================================ */
+const D0 = "'2026-07-08'", W0 = "'2026-07-01'";
 const Q = {
   kpi: `SELECT
-      round(sumIf(ggr_eur, toDate(ts)='2026-07-08')),
-      round(sumIf(stake_eur, toDate(ts)='2026-07-08')),
-      countIf(toDate(ts)='2026-07-08'),
-      uniqExactIf(player_id, toDate(ts)='2026-07-08'),
-      round(sumIf(ggr_eur, toDate(ts)>='2026-07-01' AND toDate(ts)<'2026-07-08')/7),
-      round(sumIf(stake_eur, toDate(ts)>='2026-07-01' AND toDate(ts)<'2026-07-08')/7)
+      round(sumIf(ggr_eur, toDate(ts)=${D0})), round(sumIf(stake_eur, toDate(ts)=${D0})),
+      countIf(toDate(ts)=${D0}), uniqExactIf(player_id, toDate(ts)=${D0}),
+      round(sumIf(ggr_eur, toDate(ts)>=${W0} AND toDate(ts)<${D0})/7),
+      round(sumIf(stake_eur, toDate(ts)>=${W0} AND toDate(ts)<${D0})/7),
+      round(countIf(toDate(ts)>=${W0} AND toDate(ts)<${D0})/7),
+      round(uniqExactIf(player_id, toDate(ts)>=${W0} AND toDate(ts)<${D0})/7)
     FROM igaming.bets WHERE status='settled'`,
+  week: `SELECT toString(toDate(ts)), round(sum(ggr_eur)), round(sum(stake_eur)),
+      count(), uniqExact(player_id)
+    FROM igaming.bets WHERE status='settled'
+      AND toDate(ts)>=${W0} AND toDate(ts)<=${D0}
+    GROUP BY toDate(ts) ORDER BY toDate(ts)`,
   ggrByDay: `SELECT toString(toDate(ts)), round(sum(ggr_eur)) FROM igaming.bets
     WHERE status='settled' AND ts >= '2026-06-01' AND ts < '2026-09-01'
     GROUP BY toDate(ts) ORDER BY toDate(ts)`,
@@ -478,18 +597,21 @@ const Q = {
     FROM igaming.bets WHERE status='settled' GROUP BY brand_name ORDER BY h DESC`,
   hit: `SELECT provider_id, round(100*countIf(payout_eur>0)/count(),2) AS h
     FROM igaming.bets WHERE vertical!='sportsbook' AND status='settled'
-      AND NOT is_bonus AND toDate(ts)='2026-07-08'
+      AND NOT is_bonus AND toDate(ts)=${D0}
     GROUP BY provider_id ORDER BY h DESC`,
-  psp: `SELECT psp, round(100*countIf(status='approved')/count(),1) AS a
-    FROM igaming.payments WHERE txn_type='deposit' GROUP BY psp ORDER BY a DESC`,
-  lat: `SELECT brand_name, round(quantile(0.99)(accept_latency_ms)) AS p
-    FROM igaming.bets GROUP BY brand_name ORDER BY p DESC`,
+  psp: `SELECT psp,
+      round(100*countIf(status='approved' AND toDate(ts)=${D0})/countIf(toDate(ts)=${D0}),2) AS d,
+      round(100*countIf(status='approved' AND toDate(ts)>=${W0} AND toDate(ts)<${D0})
+               /countIf(toDate(ts)>=${W0} AND toDate(ts)<${D0}),2)
+    FROM igaming.payments WHERE txn_type='deposit' GROUP BY psp ORDER BY d DESC`,
+  lat: `SELECT brand_name,
+      round(quantileIf(0.99)(accept_latency_ms, toDate(ts)=${D0})) AS d,
+      round(quantileIf(0.99)(accept_latency_ms, toDate(ts)>=${W0} AND toDate(ts)<${D0}))
+    FROM igaming.bets GROUP BY brand_name ORDER BY d DESC`,
   games: `SELECT game_name, provider_id,
       round(100*sum(payout_eur)/sum(stake_eur),1),
-      round(100*sum(stake_eur*theoretical_rtp)/sum(stake_eur),1),
-      count()
-    FROM igaming.bets WHERE vertical='casino' AND status='settled'
-      AND toDate(ts)='2026-07-08'
+      round(100*sum(stake_eur*theoretical_rtp)/sum(stake_eur),1), count()
+    FROM igaming.bets WHERE vertical='casino' AND status='settled' AND toDate(ts)=${D0}
     GROUP BY game_name, provider_id HAVING count()>150
     ORDER BY sum(stake_eur) DESC LIMIT 8`,
 };
@@ -498,18 +620,14 @@ let timer = null;
 
 async function ch(sql) {
   const base = $("#host").value.replace(/\/+$/, "");
-  const p = new URLSearchParams({
-    add_http_cors_header: "1",
-    default_format: "JSONCompact",
-    user: $("#user").value,
-  });
+  const p = new URLSearchParams({ add_http_cors_header: "1",
+    default_format: "JSONCompact", user: $("#user").value });
   if ($("#pass").value) p.set("password", $("#pass").value);
-  const res = await fetch(base + "/?" + p.toString(), {
-    method: "POST", headers: { "Content-Type": "text/plain" }, body: sql,
-  });
-  const text = await res.text();
-  if (!res.ok) throw new Error("HTTP " + res.status + ": " + text.slice(0, 300));
-  return JSON.parse(text).data;
+  const res = await fetch(base + "/?" + p, { method: "POST",
+    headers: { "Content-Type": "text/plain" }, body: sql });
+  const t = await res.text();
+  if (!res.ok) throw new Error("HTTP " + res.status + ": " + t.slice(0, 300));
+  return JSON.parse(t).data;
 }
 
 async function goLive() {
@@ -517,37 +635,36 @@ async function goLive() {
   try {
     st.textContent = "querying…";
     const t0 = performance.now();
-    const [k, g, h, hit, psp, lat, games] = await Promise.all([
-      ch(Q.kpi), ch(Q.ggrByDay), ch(Q.hold), ch(Q.hit), ch(Q.psp), ch(Q.lat), ch(Q.games),
-    ]);
+    const keys = ["kpi", "week", "ggrByDay", "hold", "hit", "psp", "lat", "games"];
+    const out = await Promise.all(keys.map((k) => ch(Q[k])));
     const ms = Math.round(performance.now() - t0);
-    const r = k[0].map(Number);
+    const r = out[0][0].map(Number);
+    const N = (a) => a.map((x) => x.map((v, i) => (i ? Number(v) : v)));
     renderAll({
-      kpi: { ggr: r[0], turnover: r[1], bets: r[2], players: r[3], ggr7: r[4], turnover7: r[5] },
-      ggrByDay: g.map((x) => [x[0], Number(x[1])]),
-      hold: h.map((x) => [x[0], Number(x[1])]),
-      hit: hit.map((x) => [x[0], Number(x[1])]),
-      psp: psp.map((x) => [x[0], Number(x[1])]),
-      lat: lat.map((x) => [x[0], Number(x[1])]),
-      games: games.map((x) => [x[0], x[1], Number(x[2]), Number(x[3]), Number(x[4])]),
+      kpi: { ggr: r[0], turnover: r[1], bets: r[2], players: r[3],
+             ggr7: r[4], turnover7: r[5], bets7: r[6], players7: r[7] },
+      week: N(out[1]), ggrByDay: N(out[2]), hold: N(out[3]), hit: N(out[4]),
+      psp: N(out[5]), lat: N(out[6]),
+      games: out[7].map((x) => [x[0], x[1], Number(x[2]), Number(x[3]), Number(x[4])]),
     });
-    const btn = $("#modeBtn");
-    btn.textContent = "LIVE"; btn.dataset.live = "1";
-    st.textContent = "live · 7 queries in " + ms + " ms · " + new Date().toLocaleTimeString();
+    const chip = $("#modeChip");
+    chip.textContent = "LIVE"; chip.dataset.live = "1";
+    st.textContent = keys.length + " queries in " + ms + " ms · " +
+      new Date().toLocaleTimeString();
   } catch (e) {
     st.textContent = "failed: " + e.message +
       "\n\nClickHouse must be reachable over HTTP from this page. For a local server:" +
       "\n  clickhousectl local server start" +
       "\n  CLICKHOUSE_HOST=localhost ./generate.sh small" +
-      "\nThen host = http://localhost:8123, user = default, password empty.";
+      "\nThen host http://localhost:8123, user default, password empty.";
   }
 }
 
 function backToSnapshot() {
   if (timer) { clearInterval(timer); timer = null; $("#auto").checked = false; }
   renderAll(SNAP);
-  const btn = $("#modeBtn");
-  btn.textContent = "SNAPSHOT"; btn.dataset.live = "0";
+  const chip = $("#modeChip");
+  chip.textContent = "SNAPSHOT"; chip.dataset.live = "0";
   $("#status").textContent =
     "Snapshot mode. Figures baked in from a small tier build — no network needed.";
 }
@@ -558,8 +675,9 @@ $("#auto").addEventListener("change", (e) => {
   if (timer) { clearInterval(timer); timer = null; }
   if (e.target.checked) { goLive(); timer = setInterval(goLive, 5000); }
 });
-// The mode chip doubles as a light/dark toggle.
-$("#modeBtn").addEventListener("click", () => {
+$("#tables").addEventListener("change", (e) =>
+  document.body.classList.toggle("show-tables", e.target.checked));
+$("#themeBtn").addEventListener("click", () => {
   const cur = document.documentElement.getAttribute("data-theme");
   const dark = cur ? cur === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
   document.documentElement.setAttribute("data-theme", dark ? "light" : "dark");

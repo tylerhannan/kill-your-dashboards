@@ -101,6 +101,17 @@ does not just miss the problem, it actively points away from it.
 The signal was never the level. It was the change against its own
 baseline, inside a window nobody chose in advance.
 
+**The detail worth pausing on.** Look at which tiles compare the day
+against the prior week and which do not. Deposit approval does. Bet
+acceptance latency does. Every headline figure does. Hit rate by provider
+does not, because nobody ever worried about game providers drifting.
+
+Somebody will say the fix is obvious: put a baseline on the provider
+tile. They are right, and that is the point. It is obvious *now*, once
+you know what happened. The tile you need is always obvious after the
+incident and never before it, which is why the ability to ask the
+question matters more than the tile.
+
 ## Beat 6 — impact and action
 
 > **"How much did that cost us, and which brands were affected?"**
