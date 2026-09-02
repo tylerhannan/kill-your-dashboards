@@ -1,0 +1,19 @@
+# Generated data. Everything here is reproducible from ./generate.sh, so
+# none of it belongs in the repository.
+/data/
+/.clickhouse/
+*.parquet
+
+# The ClickHouse binary, if you install it into the repo directory with
+# `curl https://clickhouse.com/ | sh`.
+/clickhouse
+
+# Connection details written by `clickhousectl local server dotenv`.
+.env
+.clickhouse/credentials.json
+
+# Editor and OS noise
+.DS_Store
+*.swp
+.idea/
+.vscode/
