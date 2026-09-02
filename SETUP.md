@@ -160,8 +160,34 @@ projections are available to it.
 
 ## MCP
 
-To let an agent query this dataset over MCP, point the ClickHouse MCP
-server at whichever target you loaded.
+Two options, and which one you want depends on where the data is.
+
+### Remote MCP, for ClickHouse Cloud
+
+If the dataset is in Cloud, there is a hosted MCP server and nothing to
+run yourself. Enable it per service first: open the service in the Cloud
+console, click **Connect**, choose **MCP**, and enable it. Then point
+your client at:
+
+```
+https://mcp.clickhouse.cloud/mcp
+```
+
+Authentication is OAuth 2.0, so the first connection opens a browser for
+you to sign in with your Cloud credentials. There is no API key to place
+in a config file, which also means no password sitting in a JSON file on
+the laptop you are presenting from.
+
+It exposes 13 read-only tools. Three are the ones this dataset cares
+about — `run_select_query`, `list_databases`, `list_tables` — and the
+rest cover service, backup, ClickPipes and billing metadata, which is
+useful when the agent needs to reason about the service and not just the
+data in it.
+
+### Local MCP server, for anything self-hosted
+
+For `clickhouse-local` or the local server from option 2, run
+[mcp-clickhouse](https://github.com/ClickHouse/mcp-clickhouse) yourself.
 
 Against the local server from option 2:
 
@@ -185,12 +211,26 @@ Against the local server from option 2:
 }
 ```
 
-Against Cloud, set `CLICKHOUSE_HOST` to the service host, `CLICKHOUSE_PORT`
-to `8443`, and `CLICKHOUSE_SECURE` to `true`.
+You can point the same server at Cloud by setting `CLICKHOUSE_HOST` to
+the service host, `CLICKHOUSE_PORT` to `8443` and `CLICKHOUSE_SECURE` to
+`true`, but prefer the remote MCP server above if the data is in Cloud:
+it needs no local process and no stored password.
 
 Check the [mcp-clickhouse](https://github.com/ClickHouse/mcp-clickhouse)
 README for the current configuration surface, which moves faster than
 this file will.
+
+### Agent observability
+
+Whichever you use, do not build the tracing side yourself.
+[Langfuse](https://langfuse.com) is the open-source platform for LLM and
+agent observability, and ClickHouse
+[acquired it](https://clickhouse.com/blog/clickhouse-acquires-langfuse-open-source-llm-observability)
+in January 2026. Its architecture runs entirely on ClickHouse in both
+the cloud and self-hosted deployments.
+
+The `agent_traces` table in this repo is synthetic. It exists so the
+query fan-out per question is a measurable number rather than a claim.
 
 ## Sizing reference
 

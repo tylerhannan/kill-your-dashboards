@@ -39,7 +39,9 @@ server, is in [SETUP.md](SETUP.md).
 
 | | |
 |---|---|
-| [SETUP.md](SETUP.md) | Laptop, local server, and Cloud via `clickhousectl`. MCP config. Sizing. |
+| [SETUP.md](SETUP.md) | Laptop, local server, and Cloud via `clickhousectl`. MCP, remote and local. Sizing. |
+| [DEMO.md](DEMO.md) | The questions to ask an agent, in order, and what each should return. |
+| [dashboard/](dashboard/index.html) | A competent operator dashboard that misses the problem entirely. |
 | [challenges/](challenges/README.md) | The five planted problems, with hints and answers. Start here. |
 | [queries/01_operator_basics.sql](queries/01_operator_basics.sql) | The dashboard tiles. Questions somebody already built for you. |
 | [queries/02_beyond_the_dashboard.sql](queries/02_beyond_the_dashboard.sql) | The questions nobody pre-built. The point of the repo. |
@@ -172,6 +174,22 @@ breaches that nothing ever flagged.
 Solutions are in the generator files, which are commented, so the SQL
 is the spoiler. Read `challenges/README.md` first if you want to try
 them cold.
+
+## The dashboard that misses it
+
+`dashboard/index.html` is a single self-contained file: six tiles of GGR
+by day, hold by brand, hit rate by provider, deposit approval, latency,
+and top games. Every figure on it is accurate.
+
+None of them find the 8 July problem. The provider tile is worse than
+useless: it shows the culprit with the *lowest* hit rate of any provider
+that day, because it averages twelve broken hours with twelve normal
+ones and because that provider's baseline is genuinely the lowest in the
+portfolio. The dashboard is not wrong. It simply cannot answer a
+question nobody built it for.
+
+Open it directly for baked-in figures, or point it at ClickHouse over
+HTTP to query live. [DEMO.md](DEMO.md) has the running order.
 
 ## How the generation works
 
