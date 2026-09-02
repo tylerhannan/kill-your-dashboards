@@ -10,8 +10,10 @@
 -- hash, grace hash, full sorting merge, partial merge, direct), with
 -- automatic algorithm selection from statistics and global join
 -- reordering. TPC-H join performance improved roughly fourfold through
--- 2025. If a join makes your schema simpler and your data easier to
--- manage, that is a good reason to use one.
+-- 2025 and has kept improving through 2026 -- runtime filters, faster
+-- outer joins, better correlated subqueries. If a join makes your schema
+-- simpler and your data easier to manage, that is a good reason to use
+-- one.
 --
 -- Denormalisation earns its place here for two specific reasons.
 --

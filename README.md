@@ -96,9 +96,11 @@ ClickHouse" advice you may have read is out of date. ClickHouse supports
 all standard join types plus SEMI, ANTI and ASOF, across six join
 [algorithms](https://clickhouse.com/docs/guides/joining-tables) with
 automatic optimisation from statistics and global join reordering. TPC-H
-join performance improved roughly fourfold through 2025. Joins are a
-legitimate modelling tool here, and where one makes a schema simpler and
-the data easier to manage, use it.
+join performance improved roughly fourfold through 2025, and kept
+improving through 2026 with runtime filters, faster outer joins and
+better correlated subquery handling. Joins are a legitimate modelling
+tool here, and where one makes a schema simpler and the data easier to
+manage, use it.
 
 Denormalisation is the right call *here* because this dataset exists to
 demonstrate one specific thing: maximum single-query performance on a
