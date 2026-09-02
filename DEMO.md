@@ -13,16 +13,35 @@ The dashboard is not wrong. That is the whole point, and it is worth
 saying out loud on stage. Every tile on it is accurate. It simply cannot
 answer a question nobody thought to build it for.
 
+Three questions live, in a 25-minute slot. The fourth and fifth are in
+this file for anyone who wants to carry on afterwards, and saying so from
+the stage is better than rushing them.
+
 | Beat | What happens | ~Time |
 |---|---|---|
-| 1 | Dashboard. Margin looks soft that week, nothing explains it | 45s |
-| 2 | Ask the vague question a human would actually ask | 30s |
-| 3 | Agent narrows it: hit frequency, not RTP | 90s |
-| 4 | Agent finds the provider and the window | 45s |
-| 5 | **Back to the dashboard.** The provider tile points the wrong way | 60s |
-| 6 | Impact, and what you would do about it | 30s |
+| 1 | Dashboard. Margin looks soft that week, nothing explains it | 60s |
+| 2 | **Question 1.** The vague one a human actually asks | 90s |
+| 3 | **Question 2.** Agent narrows it: hit frequency, not RTP | 120s |
+| 4 | **Question 3.** Group by provider. There it is | 90s |
+| 5 | **Back to the dashboard.** The provider tile points the wrong way | 75s |
 
-Beat 5 is the one people remember and the one that gets skipped.
+About eight minutes of clock. Budget nine.
+
+Beat 5 is the one people remember and the one that gets skipped. It is
+also the one you never cut: if you are at seven minutes and the payoff is
+still coming, drop beat 4's hourly confirmation and go straight to the
+dashboard.
+
+Time is spent on the agent, not on you. A question that fans out to a
+dozen tool calls is a minute or two of wall clock on its own, and you
+cannot narrate silently over all of it. Two things buy that time back:
+
+- **Pre-warm everything.** A cold Cloud service, a cold MCP connection
+  and a cold model context will cost you a minute you have not got. Run a
+  throwaway question before you walk on.
+- **Seed the skill** with the metric rule in beat 3. Without it the agent
+  may reach for RTP, find noise, and confidently report nothing wrong.
+  That is a ninety-second detour with no payoff.
 
 ## Beat 1 — the dashboard
 
@@ -33,7 +52,7 @@ What to say: margin was soft the week of 6 July. GGR by day is noisy and
 several days that month are negative, so nothing on this screen isolates
 a cause. The games team says nothing changed.
 
-## Beat 2 — the question a human asks
+## Question 1 — the one a human actually asks
 
 > **"Margin was soft the week of the 6th of July. What happened?"**
 
@@ -44,7 +63,7 @@ Expect the agent to look at GGR by day, maybe by brand and vertical, and
 report that turnover dipped and hold went negative on the 8th without
 being able to say why. That is the correct answer to a vague question.
 
-## Beat 3 — sharpening it
+## Question 2 — sharpening it
 
 > **"Which games paid out more often than they were supposed to on the
 > 8th, and when did it start?"**
@@ -63,18 +82,18 @@ titles and several games will look broken when they are fine.
 - Or let it reach for RTP, watch it find nothing conclusive, and say so.
   Owning that is more convincing than a demo that never stumbles.
 
-## Beat 4 — the pivot that finds it
+## Question 3 — the pivot that finds it
 
 > **"Group that by provider rather than by game."**
 
 The effect is spread across roughly fifty Redwood titles. Each one alone
-looks like variance. Together, they are unmistakable.
+looks like variance. Together, they are unmistakable, and this is where
+you stop and go back to the dashboard.
 
-> **"Now show me Redwood's hit rate by hour on the 8th against the same
-> hours the week before."**
-
-Expected: roughly 34% inside 02:00–14:00 UTC against roughly 24.7%
-outside it, while no other provider moves more than about two points.
+If there is time, the hourly confirmation is worth showing. If there is
+not, say it out loud instead: it is roughly 34% inside 02:00–14:00 UTC
+against roughly 24.7% outside, while no other provider moves more than
+about two points. Then tell them it is question 4 in the repo.
 
 ## Beat 5 — back to the dashboard
 
@@ -112,12 +131,21 @@ you know what happened. The tile you need is always obvious after the
 incident and never before it, which is why the ability to ask the
 question matters more than the tile.
 
-## Beat 6 — impact and action
+## Questions 4 and 5 — not live, in the repo
 
-> **"How much did that cost us, and which brands were affected?"**
+Say from the stage that these are in the repo. It is a better close than
+a rushed fourth query, and it gives people a reason to clone it.
 
-All eight brands, since the config push was provider-wide. The action is
-concrete: roll back the provider config and reconcile the affected
+> **4. "Show me Redwood's hit rate by hour on the 8th against the same
+> hours the week before."**
+
+The confirmation. Roughly 34% inside 02:00–14:00 UTC against 24.7%
+outside, with no other provider moving more than about two points.
+
+> **5. "How much did that cost us, and which brands were affected?"**
+
+All eight, because the config push was provider-wide. The action is
+concrete: roll the provider config back and reconcile the affected
 rounds.
 
 ## Agent observability, briefly
