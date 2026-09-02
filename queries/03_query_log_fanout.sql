@@ -5,14 +5,33 @@
 -- natural-language question actually became, using ClickHouse's own query
 -- log rather than anything this repo generated.
 --
--- Availability:
---   ClickHouse Cloud     on by default
---   local server         on by default
---   clickhouse-local     off; start with --query_log 1, or use a server
+-- Availability, tested rather than assumed:
 --
--- The MCP server connects as a normal user, so its queries appear in
--- query_log like any other client. Narrow by user or by time window if
+--   ClickHouse Cloud            available (the SQL console relies on it)
+--   clickhouse server (default) available
+--   clickhousectl local server  NOT available. `log_queries` reads 1,
+--                               but the shipped config has no <query_log>
+--                               block, so the table is never created and
+--                               SYSTEM FLUSH LOGS silently does nothing
+--   clickhouse-local            NOT available. No system.query_log at all
+--
+-- To enable it on a clickhousectl-managed server, add to its config:
+--
+--   <query_log>
+--     <database>system</database>
+--     <table>query_log</table>
+--     <flush_interval_milliseconds>1000</flush_interval_milliseconds>
+--   </query_log>
+--
+-- The MCP server connects as a normal user, so its queries land in
+-- query_log like any other client's. Narrow by user or time window if
 -- other things are running.
+--
+-- Sample output from a 20-query burst against the `small` tier:
+--   section 2  20 queries in one second, avg 72ms, 78.8M rows read
+--   section 3  one shape run 15 times, another 5
+--   section 4  peak 17 concurrent
+--   section 5  27 queries, 808 MiB read, 2.47 GiB peak query memory
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
@@ -44,7 +63,7 @@ LIMIT 40;
 -- question produces a spike. The peak second is the honest headline.
 -- ---------------------------------------------------------------------
 SELECT
-    toStartOfSecond(event_time)                 AS second,
+    event_time                                  AS second,
     count()                                     AS queries,
     round(avg(query_duration_ms))               AS avg_ms,
     max(query_duration_ms)                      AS slowest_ms,
@@ -100,14 +119,15 @@ FROM
         sum(delta) OVER (ORDER BY ts, delta DESC ROWS UNBOUNDED PRECEDING) AS in_flight
     FROM
     (
-        SELECT event_time - (query_duration_ms / 1000) AS ts, 1 AS delta
+        SELECT event_time_microseconds - toIntervalMillisecond(query_duration_ms) AS ts,
+               1 AS delta
         FROM system.query_log
         WHERE type = 'QueryFinish'
           AND event_time > now() - INTERVAL 10 MINUTE
           AND query NOT LIKE '%system.query_log%'
           AND query_kind = 'Select'
         UNION ALL
-        SELECT event_time AS ts, -1 AS delta
+        SELECT event_time_microseconds AS ts, -1 AS delta
         FROM system.query_log
         WHERE type = 'QueryFinish'
           AND event_time > now() - INTERVAL 10 MINUTE

@@ -229,9 +229,15 @@ agent observability, and ClickHouse
 in January 2026. Its architecture runs entirely on ClickHouse in both
 the cloud and self-hosted deployments.
 
-For fan-out on your own runs, `system.query_log` already has it: every
-query the MCP server issued, with rows and bytes read. See
+For fan-out on your own runs, `system.query_log` has it: every query the
+MCP server issued, with rows and bytes read. See
 `queries/03_query_log_fanout.sql`.
+
+One gotcha, found the hard way. `clickhousectl local server` ships a
+config with no `<query_log>` block, so the table is never created even
+though the `log_queries` setting reads 1. `clickhouse-local` has no
+`system.query_log` at all. Use Cloud, or add the config block that
+`queries/03_query_log_fanout.sql` documents.
 
 ## Sizing reference
 

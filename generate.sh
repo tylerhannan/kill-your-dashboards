@@ -27,18 +27,38 @@ set -euo pipefail
 
 TIER="${1:-small}"
 SQL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sql"
-CH="${CH:-clickhouse}"
+# Find the binary. `curl https://clickhouse.com/ | sh` drops it in the
+# working directory, which is what the README tells you to do, so check
+# there before PATH. Override with CH=/path/to/clickhouse.
+if [[ -n "${CH:-}" ]]; then
+  :
+elif [[ -x ./clickhouse ]]; then
+  CH=./clickhouse
+elif command -v clickhouse >/dev/null 2>&1; then
+  CH=clickhouse
+else
+  cat >&2 <<'EOF'
+No clickhouse binary found.
+
+  curl https://clickhouse.com/ | sh     # drops ./clickhouse here
+
+Or point at one you already have:
+
+  CH=/usr/local/bin/clickhouse ./generate.sh small
+EOF
+  exit 127
+fi
 
 case "$TIER" in
   small)
     N_BETS=10000000;    N_PLAYERS=8000;      N_PAYMENTS=250000
-    N_EMPTY_SESSIONS=100000;   N_SPANS=2000000 ;;
+    N_EMPTY_SESSIONS=100000 ;;
   medium)
     N_BETS=1000000000;  N_PLAYERS=800000;    N_PAYMENTS=25000000
-    N_EMPTY_SESSIONS=10000000; N_SPANS=20000000 ;;
+    N_EMPTY_SESSIONS=10000000 ;;
   large)
     N_BETS=10000000000; N_PLAYERS=8000000;   N_PAYMENTS=250000000
-    N_EMPTY_SESSIONS=100000000; N_SPANS=60000000 ;;
+    N_EMPTY_SESSIONS=100000000 ;;
   *)
     echo "unknown tier '$TIER' -- expected small, medium or large" >&2
     exit 2 ;;
@@ -92,14 +112,12 @@ PARAMS=(
   --param_n_players="$N_PLAYERS"
   --param_n_payments="$N_PAYMENTS"
   --param_n_empty_sessions="$N_EMPTY_SESSIONS"
-  --param_n_spans="$N_SPANS"
 )
 
 printf 'tier      %s\n' "$TIER"
 printf 'target    %s\n' "$TARGET"
 printf 'bets      %s\n' "$(printf "%'d" "$N_BETS")"
-printf 'players   %s\n' "$(printf "%'d" "$N_PLAYERS")"
-printf 'spans     %s\n\n' "$(printf "%'d" "$N_SPANS")"
+printf 'players   %s\n\n' "$(printf "%'d" "$N_PLAYERS")"
 
 # Order matters twice over. The bonus abuse cohort is inserted before
 # sessions are derived, or its bets carry session_ids that no session
