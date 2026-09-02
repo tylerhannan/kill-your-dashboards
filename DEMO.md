@@ -13,24 +13,30 @@ The dashboard is not wrong. That is the whole point, and it is worth
 saying out loud on stage. Every tile on it is accurate. It simply cannot
 answer a question nobody thought to build it for.
 
-Three questions live, in a 25-minute slot. The fourth and fifth are in
-this file for anyone who wants to carry on afterwards, and saying so from
-the stage is better than rushing them.
+Five questions, about thirteen minutes. That only works because the deck
+is ten statement slides rather than fifteen dense ones: the slides land
+the argument, the demo carries the substance.
 
 | Beat | What happens | ~Time |
 |---|---|---|
-| 1 | Dashboard. Margin looks soft that week, nothing explains it | 60s |
-| 2 | **Question 1.** The vague one a human actually asks | 90s |
-| 3 | **Question 2.** Agent narrows it: hit frequency, not RTP | 120s |
-| 4 | **Question 3.** Group by provider. There it is | 90s |
-| 5 | **Back to the dashboard.** The provider tile points the wrong way | 75s |
+| 1 | Dashboard. Margin looks soft that week, nothing explains it | 75s |
+| 2 | **Question 1.** The vague one a human actually asks | 100s |
+| 3 | **Question 2.** Agent narrows it: hit frequency, not RTP | 140s |
+| 4 | **Question 3.** Group by provider. There it is | 100s |
+| 5 | **Back to the dashboard.** The provider tile points the wrong way | 90s |
+| 6 | **Question 4.** Hourly confirmation against last week | 100s |
+| 7 | **Question 5.** What it cost, and which brands | 90s |
 
-About eight minutes of clock. Budget nine.
+About thirteen minutes with room to breathe between questions.
+
+Three things now live here that used to be slides, because showing beats
+claiming: the columnar foundation (every query returns while you talk),
+the metric-choice skill (beat 3), and agent observability (one spoken
+line about Langfuse).
 
 Beat 5 is the one people remember and the one that gets skipped. It is
-also the one you never cut: if you are at seven minutes and the payoff is
-still coming, drop beat 4's hourly confirmation and go straight to the
-dashboard.
+also the one you never cut. Cut in this order if you are running long:
+beat 7, then beat 6, then beat 3's second attempt. Never beat 5.
 
 Time is spent on the agent, not on you. A question that fans out to a
 dozen tool calls is a minute or two of wall clock on its own, and you
@@ -90,10 +96,9 @@ The effect is spread across roughly fifty Redwood titles. Each one alone
 looks like variance. Together, they are unmistakable, and this is where
 you stop and go back to the dashboard.
 
-If there is time, the hourly confirmation is worth showing. If there is
-not, say it out loud instead: it is roughly 34% inside 02:00–14:00 UTC
-against roughly 24.7% outside, while no other provider moves more than
-about two points. Then tell them it is question 4 in the repo.
+Stop here and go back to the dashboard before confirming it. The
+confirmation is question 4, and it lands harder after the room has seen
+the tile point the wrong way.
 
 ## Beat 5 — back to the dashboard
 
@@ -131,10 +136,10 @@ you know what happened. The tile you need is always obvious after the
 incident and never before it, which is why the ability to ask the
 question matters more than the tile.
 
-## Questions 4 and 5 — not live, in the repo
+## Questions 4 and 5 — live, if the clock allows
 
-Say from the stage that these are in the repo. It is a better close than
-a rushed fourth query, and it gives people a reason to clone it.
+Both are worth showing. If you are behind, say the numbers out loud and
+tell the room they are in the repo.
 
 > **4. "Show me Redwood's hit rate by hour on the 8th against the same
 > hours the week before."**
