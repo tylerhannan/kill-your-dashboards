@@ -295,9 +295,9 @@ for the events that did not happen. You can only ask.
 
 ## Doing this with an agent
 
-The interesting exercise is not solving these yourself. It is pointing an
-agent at the database over MCP (see [`../SETUP.md`](../SETUP.md)) and
-giving it the symptom line, then watching what it does.
+Point an agent at the database over MCP (see
+[`../SETUP.md`](../SETUP.md)), give it the symptom line, and watch what
+it does. That is more interesting than solving them yourself.
 
 Things worth watching for:
 

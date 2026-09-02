@@ -48,7 +48,7 @@ CLICKHOUSE_HOST=localhost ./generate.sh small
 ```
 
 TLS is off automatically for localhost. To use a bigger tier locally,
-`medium` is fine on a workstation with enough disk — expect roughly 25GB
+`medium` is fine on a workstation with enough disk. Expect roughly 25GB
 for a billion bets, most of it the `bets` table and its projection.
 
 Connect:

@@ -130,9 +130,9 @@ Columns you don't select cost nothing to read at all.
 
 The second reason is concurrency. A join holds memory for the life of
 the query, and memory is the resource that gets tight when one question
-fans out into forty simultaneous queries. That is an argument about this
-workload's shape, not about join performance: forty concurrent
-well-optimised joins still need more memory than forty scans.
+fans out into forty simultaneous queries. Forty concurrent
+well-optimised joins still need more memory than forty scans, so the
+argument is about this workload's shape rather than join performance.
 
 Reference tables still exist, and
 [dictionaries](https://clickhouse.com/docs/dictionary) over them are how
