@@ -115,7 +115,6 @@ STEPS=(
   06_anomalies:"bonus abuse cohort"
   07_sessions:"sessions"
   08_rg_events:"responsible gaming"
-  09_agent_traces:"agent traces"
 )
 
 TOTAL_START=$SECONDS

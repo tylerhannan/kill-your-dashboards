@@ -51,18 +51,16 @@ reports nothing wrong. Two options:
 
 Langfuse: open-source LLM and agent observability, acquired by ClickHouse
 in January 2026, runs entirely on ClickHouse. Don't build tracing
-yourself. `agent_traces` here is synthetic, and exists so the fan-out
-number is measurable.
+yourself.
+
+For live fan-out, run `queries/03_query_log_fanout.sql` against
+`system.query_log` after a question. The count is real, and it is the
+strongest version of the argument.
 
 ## Reference numbers
 
 | Metric | Value |
 |---|---|
-| Queries per question | 14 median, 43 p95 |
-| Queue wait by fan-out | 189ms (6–15) → 562ms (16–35) → 3,550ms (35+) |
-| Worst queue wait | 20.2s |
-| Silently truncated | 2.3% of spans |
-| Repeated query shapes | 6.7 per question |
 | Limit breaches / caught / missed | 12,185 / 10,439 / 1,746 |
 | Denormalised column cost | 0.11–0.22 bytes/row, vs 2.1 for a timestamp |
 

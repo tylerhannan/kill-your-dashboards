@@ -45,7 +45,7 @@ server, is in [SETUP.md](SETUP.md).
 | [challenges/](challenges/README.md) | The five planted problems, with hints and answers. Start here. |
 | [queries/01_operator_basics.sql](queries/01_operator_basics.sql) | The dashboard tiles. Questions somebody already built for you. |
 | [queries/02_beyond_the_dashboard.sql](queries/02_beyond_the_dashboard.sql) | The questions nobody pre-built. The point of the repo. |
-| [queries/03_agent_observability.sql](queries/03_agent_observability.sql) | Fan-out, queue wait, silent truncation, adoption curve. |
+| [queries/03_query_log_fanout.sql](queries/03_query_log_fanout.sql) | Real fan-out from `system.query_log`, after you run the demo. |
 | [sql/10_verify.sql](sql/10_verify.sql) | Every invariant the data should satisfy. Run it after generating. |
 
 ## Live data
@@ -84,7 +84,6 @@ silently invalidates every session-level metric in the dataset.
 | `payments` | 25M | Deposits and withdrawals, by provider and method |
 | `sessions` | ~30M | One row per login, including logins with no bets |
 | `rg_events` | ~3M | Responsible gaming: limits, cool-offs, exclusions, flags |
-| `agent_traces` | 20M | Every tool call an agent made against this data |
 | `players`, `games`, `markets`, `brands`, `fx_rates` | small | Reference data |
 
 ### The wide table
@@ -140,29 +139,19 @@ the generators stay honest, so RTP and margin have exactly one source of
 truth. Query them directly for the catalogue itself. There is no reason
 to join them onto `bets` for attributes `bets` already carries.
 
-### Agent traces
+### Agent observability
 
-One row per tool call, many rows per `trace_id`, because one question in
-words becomes many queries against the database. At the `small` tier
-that ratio comes out at a median of 14 and a 95th percentile of 43.
+This repo does not ship synthetic agent traces. If you want to see what
+an agent actually did, two places have the real thing:
 
-Three columns are there because they are the three that hurt:
+- `system.query_log`, which records every query the MCP server ran,
+  including how many one natural-language question turned into.
+- [Langfuse](https://langfuse.com), the open-source LLM and agent
+  observability platform. ClickHouse acquired it in January 2026 and its
+  architecture runs entirely on ClickHouse, self-hosted or cloud.
 
-- **`queue_wait_ms`** — time waiting for a slot rather than executing.
-  This moves long before p99 execution time does. Average queue wait
-  climbs 189ms, 562ms, 3,550ms across traces of 6-15, 16-35 and more
-  than 35 queries: a 19x increase driven purely by how many questions
-  one question became. Worst observed is 20.2 seconds.
-- **`silently_truncated`** — the result was cut short and the model was
-  handed a partial answer without being told. About 2.3% of spans. This
-  is where confident wrong answers come from.
-- **`sql_fingerprint`** — literals stripped. Group by it within a trace
-  and the redundant re-asking becomes countable: about 6.7 repeated
-  shapes per question.
-
-Agent traffic also grows across the window, from a few hundred spans in
-the first week to several hundred thousand in the last. Plot spans per
-week and the adoption curve draws itself.
+`queries/03_query_log_fanout.sql` measures fan-out from `query_log` after
+you have run the demo.
 
 ## The five things wrong with it
 

@@ -20,8 +20,7 @@ SELECT
 FROM igaming.bets
 UNION ALL SELECT 'payments', count(), min(ts), max(ts) FROM igaming.payments
 UNION ALL SELECT 'sessions', count(), min(started_at), max(started_at) FROM igaming.sessions
-UNION ALL SELECT 'rg_events', count(), min(ts), max(ts) FROM igaming.rg_events
-UNION ALL SELECT 'agent_traces', count(), min(ts), max(ts) FROM igaming.agent_traces;
+UNION ALL SELECT 'rg_events', count(), min(ts), max(ts) FROM igaming.rg_events;
 
 
 SELECT '=== 2. RTP calibration: realised vs theoretical ===' AS check;
@@ -193,51 +192,7 @@ SELECT
           / (SELECT count() FROM breaches), 1)                                  AS pct_caught;
 
 
-SELECT '=== 10. agent fan-out: queries per question ===' AS check;
-
-SELECT
-    round(avg(spans), 1)      AS avg_queries_per_question,
-    quantile(0.5)(spans)      AS p50,
-    quantile(0.95)(spans)     AS p95,
-    max(spans)                AS worst,
-    count()                   AS questions
-FROM (SELECT trace_id, count() AS spans FROM igaming.agent_traces GROUP BY trace_id);
-
-SELECT '--- queue wait is the concurrency tax, and it scales with fan-out ---' AS check;
-SELECT
-    multiIf(spans < 8, '1. 1-7 queries', spans < 20, '2. 8-19',
-            spans < 35, '3. 20-34', '4. 35+')  AS fan_out_band,
-    count()                                    AS questions,
-    round(avg(mean_queue))                     AS avg_queue_ms,
-    round(max(worst_queue))                    AS worst_queue_ms
-FROM
-(
-    SELECT trace_id, count() AS spans,
-           avg(queue_wait_ms) AS mean_queue, max(queue_wait_ms) AS worst_queue
-    FROM igaming.agent_traces
-    GROUP BY trace_id
-)
-GROUP BY fan_out_band
-ORDER BY fan_out_band;
-
-SELECT '--- results the model was handed without being told they were partial ---' AS check;
-SELECT
-    round(100 * countIf(silently_truncated) / count(), 2) AS pct_silently_truncated,
-    round(100 * countIf(status != 'ok') / count(), 2)     AS pct_failed
-FROM igaming.agent_traces;
-
-SELECT '--- the same query shape re-asked within one question ---' AS check;
-SELECT round(avg(dupes), 2) AS avg_repeated_shapes_per_question
-FROM
-(
-    SELECT trace_id, count() - uniqExact(sql_fingerprint) AS dupes
-    FROM igaming.agent_traces
-    WHERE tool_name = 'run_select_query'
-    GROUP BY trace_id
-);
-
-
-SELECT '=== 11. what the wide table actually costs ===' AS check;
+SELECT '=== 10. what the wide table actually costs ===' AS check;
 
 -- The case for denormalising. The denormalised LowCardinality columns
 -- should be a rounding error next to the timestamps and the money.
@@ -256,7 +211,9 @@ SELECT '--- table totals ---' AS check;
 SELECT
     table,
     formatReadableSize(sum(bytes_on_disk))     AS on_disk,
-    sum(rows)                                  AS rows,
+    -- Not aliased to `rows`: that shadows system.parts.rows, and the
+    -- division below then nests an aggregate inside an aggregate.
+    sum(rows)                                  AS total_rows,
     round(sum(bytes_on_disk) / sum(rows), 2)   AS bytes_per_row
 FROM system.parts
 WHERE database = 'igaming' AND active

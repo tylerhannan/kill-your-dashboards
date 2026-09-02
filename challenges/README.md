@@ -305,11 +305,10 @@ Things worth watching for:
   that reaches for RTP first.
 - **Does it handle the NULLs?** Challenge 5 has a wrong answer that looks
   extremely convincing.
-- **How many queries does it take?** Every tool call it makes lands in
-  `igaming.agent_traces` if you are logging them. The median in the
-  shipped trace data is 14 queries per question, and the 95th percentile
-  is 43.
-- **Does it notice when a result was truncated?** About 2.3% of the
-  shipped spans came back cut short with nothing signalling it. An agent
-  that reasons confidently over a partial result set produces exactly the
-  kind of answer that gets believed and is wrong.
+- **How many queries does it take?** `system.query_log` has the real
+  answer, and it is usually higher than people guess. Run
+  `../queries/03_query_log_fanout.sql` afterwards to count what one
+  question actually became.
+- **Does it notice when a result was truncated?** An agent that reasons
+  confidently over a partial result set produces exactly the kind of
+  answer that gets believed and is wrong. Check whether it says so.

@@ -229,8 +229,9 @@ agent observability, and ClickHouse
 in January 2026. Its architecture runs entirely on ClickHouse in both
 the cloud and self-hosted deployments.
 
-The `agent_traces` table in this repo is synthetic. It exists so the
-query fan-out per question is a measurable number rather than a claim.
+For fan-out on your own runs, `system.query_log` already has it: every
+query the MCP server issued, with rows and bytes read. See
+`queries/03_query_log_fanout.sql`.
 
 ## Sizing reference
 

@@ -12,7 +12,6 @@ DROP FUNCTION IF EXISTS pick;
 DROP FUNCTION IF EXISTS wpick;
 DROP FUNCTION IF EXISTS pareto_unit;
 DROP FUNCTION IF EXISTS zipf_id;
-DROP FUNCTION IF EXISTS det_uuid;
 
 -- Uniform [0, 1). `salt` gives independent streams from the same n.
 CREATE FUNCTION u AS (n, salt) ->
@@ -53,14 +52,3 @@ CREATE FUNCTION pareto_unit AS (n, salt, alpha) ->
 CREATE FUNCTION zipf_id AS (n, salt, max_id) ->
     1 + toUInt32(pow(u(n, salt), 1.5) * (max_id - 1));
 
--- A UUID derived from a key rather than from randomness, so trace and
--- span ids are stable across regenerations. generateUUIDv4() would make
--- the dataset unreproducible, which defeats the point of hashing
--- everything else.
-CREATE FUNCTION det_uuid AS (key, salt) ->
-    toUUID(concat(
-        substring(hex(cityHash64(key, salt, 1)), 1, 8),  '-',
-        substring(hex(cityHash64(key, salt, 2)), 1, 4),  '-',
-        substring(hex(cityHash64(key, salt, 3)), 1, 4),  '-',
-        substring(hex(cityHash64(key, salt, 4)), 1, 4),  '-',
-        substring(hex(cityHash64(key, salt, 5)), 1, 12)));
