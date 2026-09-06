@@ -16,7 +16,7 @@ Target: 10 minutes. Figures from a `small` tier build; re-run
 |---|---|---|---|---|
 | 1 | *Dashboard.* Margin was soft the week of 6 July. Nothing here says why. | — | GGR −€122k vs €137k prior-7 avg | 75s |
 | 2 | "Margin was soft the week of the 6th of July. What happened?" | GGR by day, maybe by brand. Turnover dipped, hold went negative on the 8th. No cause. | Turnover €2.66M vs €4.92M | 100s |
-| 3 | "Which games paid out more often than they were supposed to on the 8th, and when did it start?" | Groups by game. ~50 titles, each looks like variance. | RTP swings ±25% at one game-day | 140s |
+| 3 | "Which games paid out more often than they were supposed to on the 8th, and when did it start?" | Groups by game. ~50 titles, each looks like variance. | Single-day RTP is 69% off at p90 | 140s |
 | 4 | "Group that by provider rather than by game." | Redwood, 02:00–14:00 UTC | 34.0% in-window vs 24.7% out | 100s |
 | 5 | *Back to the dashboard.* Hit rate by provider tile. | Redwood bottom of eight | 28.1%, lowest on the day it broke | 90s |
 

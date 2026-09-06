@@ -88,7 +88,7 @@ silently invalidates every session-level metric in the dataset.
 
 ### The wide table
 
-`bets` has 45 columns and carries the player, brand, game and market
+`bets` has 43 columns and carries the player, brand, game and market
 attributes on every row. This is a deliberate choice for this dataset's
 access pattern, not general advice to avoid joins.
 
