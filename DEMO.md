@@ -1,6 +1,6 @@
 # Demo run sheet
 
-Target: 13 minutes. Figures from a `small` tier build; re-run
+Target: 10 minutes. Figures from a `small` tier build; re-run
 `sql/10_verify.sql` after generating and use what you get.
 
 ## Before you walk on
@@ -19,11 +19,20 @@ Target: 13 minutes. Figures from a `small` tier build; re-run
 | 3 | "Which games paid out more often than they were supposed to on the 8th, and when did it start?" | Groups by game. ~50 titles, each looks like variance. | RTP swings ±25% at one game-day | 140s |
 | 4 | "Group that by provider rather than by game." | Redwood, 02:00–14:00 UTC | 34.0% in-window vs 24.7% out | 100s |
 | 5 | *Back to the dashboard.* Hit rate by provider tile. | Redwood bottom of eight | 28.1%, lowest on the day it broke | 90s |
-| 6 | "Show me Redwood's hit rate by hour on the 8th against the same hours last week." | Step change at 02:00, back at 14:00 | No other provider moves >2pts | 100s |
-| 7 | "How much did that cost us, and which brands?" | All eight brands | Provider-wide config push | 90s |
 
-Cut in this order if running long: **7, then 6, then Q3's second
-attempt.** Never 5.
+Ends on beat 5. Two more questions are worth asking and not worth the
+clock — quote them instead:
+
+- Redwood's hit rate by hour on the 8th runs 34% inside 02:00–14:00 UTC
+  against 24.7% outside, and no other provider moves more than two
+  points.
+- All eight brands were affected, because the config push was
+  provider-wide.
+
+Both are in `queries/02_beyond_the_dashboard.sql`. Telling the room they
+are in the repo closes better than a rushed sixth query.
+
+If running long, drop Q3's second attempt. Never drop beat 5.
 
 ## Beat 5: three points
 
