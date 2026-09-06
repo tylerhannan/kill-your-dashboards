@@ -64,11 +64,21 @@ different answers.
 
 ## Tiers
 
-| Tier | Bets | Players | Notes |
-|---|---|---|---|
-| `small` | 10M | 8,000 | Laptop. Four of the five anomalies are findable. |
-| `medium` | 1B | 800,000 | All five, including the ones that need statistical power. |
-| `large` | 10B | 8,000,000 | Cloud. The 240-account abuse cohort is genuinely buried. |
+| Tier | Bets | Players | On disk | Generation | Notes |
+|---|---|---|---|---|---|
+| `small` | 10M | 8,000 | ~400MB | ~5s on a laptop | Laptop. Four of the five anomalies are findable. |
+| `medium` | 1B | 800,000 | ~45GB | minutes | All five, including the ones that need statistical power. |
+| `large` | 10B | 8,000,000 | ~525GB | ~66 min | Cloud. The 240-account abuse cohort is genuinely buried. |
+
+`small` and `large` are measured. `medium` is interpolated between them
+and is the only figure in that table still worth distrusting. The
+`large` row is a real build: nine steps in 3,932s against a single Cloud
+replica autoscaling between 64 and 356GB, of which `bets` alone was
+3,754s at roughly 3M rows/sec. Do not scale the disk figure linearly
+from `small` — bytes per row grows from 40.8 to 55.0 across the tiers,
+because `player_id` and `session_id` stop being low-cardinality once
+there are eight million players rather than eight thousand.
+[SETUP.md](SETUP.md) has the per-table breakdown.
 
 Player counts scale with bet counts on purpose: `n_players = n_bets /
 1250`. That keeps bets per player near what an operator really sees over
@@ -108,7 +118,7 @@ demonstrate one specific thing: maximum single-query performance on a
 known access pattern, under heavy concurrency. That is precisely the
 case the canonical guidance says denormalisation still fits.
 
-Run section 11 of `10_verify.sql` and you get the argument in numbers.
+Run section 10 of `10_verify.sql` and you get the argument in numbers.
 On a 10M-row build, the denormalised attribute columns cost this much
 per row, compressed:
 
@@ -126,6 +136,13 @@ timestamp column, because
 [`LowCardinality`](https://clickhouse.com/docs/sql-reference/data-types/lowcardinality)
 dictionary-encodes them to a byte and ZSTD takes most of that back.
 Columns you don't select cost nothing to read at all.
+
+Those figures come from `clickhouse-local` or a self-managed server.
+ClickHouse Cloud reports every per-column byte count as zero, because
+SharedMergeTree does not expose column-level size accounting in
+`system.columns` or `system.parts_columns`, so section 10 comes back
+zeroed there. The table totals underneath it, which come from
+`system.parts`, are correct on Cloud.
 
 The second reason is concurrency. A join holds memory for the life of
 the query, and memory is the resource that gets tight when one question
@@ -170,6 +187,11 @@ them cold.
 `dashboard/index.html` is a single self-contained file: six tiles of GGR
 by day, hold by brand, hit rate by provider, deposit approval, latency,
 and top games. Every figure on it is accurate.
+
+![The operator dashboard in snapshot mode, showing eight tiles for 8 July
+2026. The hit rate by provider tile ranks Redwood last of eight at
+28.13%, below Sable Studios at
+34.33%.](dashboard/screenshot.png)
 
 None of them find the 8 July problem. The provider tile is worse than
 useless: it shows the culprit with the *lowest* hit rate of any provider

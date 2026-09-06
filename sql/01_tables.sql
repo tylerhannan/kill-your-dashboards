@@ -37,6 +37,17 @@
 
 CREATE DATABASE IF NOT EXISTS igaming;
 
+-- The dictionaries in 03_dictionaries.sql hold a hard dependency on the
+-- reference tables this file drops further down, so on a re-run against
+-- a target that already has data, `DROP TABLE igaming.brands` fails with
+-- HAVE_DEPENDENT_OBJECTS (code 630). Clear the dependents first; step 03
+-- recreates all of them.
+DROP DICTIONARY IF EXISTS igaming.dict_players;
+DROP DICTIONARY IF EXISTS igaming.dict_games;
+DROP DICTIONARY IF EXISTS igaming.dict_markets;
+DROP DICTIONARY IF EXISTS igaming.dict_brands;
+DROP DICTIONARY IF EXISTS igaming.dict_fx;
+
 -- ---------------------------------------------------------------------
 -- Two conventions in this file that you should NOT copy by default.
 --

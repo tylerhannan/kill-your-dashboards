@@ -196,6 +196,13 @@ SELECT '=== 10. what the wide table actually costs ===' AS check;
 
 -- The case for denormalising. The denormalised LowCardinality columns
 -- should be a rounding error next to the timestamps and the money.
+--
+-- Run this on clickhouse-local or a self-managed server. ClickHouse
+-- Cloud reports every per-column byte count as 0 -- SharedMergeTree does
+-- not expose column-level size accounting, in `system.columns` or in
+-- `system.parts_columns` -- so on Cloud this whole result comes back
+-- zeroed and the `ratio` column reads `nan`. The table totals below,
+-- which come from `system.parts`, are correct everywhere.
 SELECT
     name                                            AS column,
     formatReadableSize(sum(data_compressed_bytes))  AS compressed,

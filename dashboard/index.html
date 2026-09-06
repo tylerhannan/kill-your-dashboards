@@ -121,6 +121,25 @@
   .zeroline { stroke: var(--ink-3); stroke-width: 1; opacity: 0.5; }
   .connector { stroke: var(--ink-3); stroke-width: 1.5; opacity: 0.45; }
 
+  /* The SQL behind each tile. Text comes from the same Q object the page
+     queries with, so what is shown is what ran -- there is no second copy
+     of the SQL to drift out of date. */
+  .sqlview { display: none; margin-top: 12px; }
+  body.show-sql .sqlview { display: block; }
+  /* Wrapper for SQL that belongs to no single tile (the KPI row). */
+  .sqlcard { display: none; }
+  body.show-sql .sqlcard { display: grid; }
+  .sqlview .qname { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+                    font-size: 12.5px; color: var(--series-1); padding: 10px 0 4px; }
+  .sqlview .qname:first-child { padding-top: 0; }
+  /* pre-wrap, not a scroller: these sit in half-width cards and a line
+     that runs off the edge is a line nobody reads off a projector. */
+  .sqlview pre { margin: 0; padding: 9px 10px; overflow-x: auto;
+                 background: var(--surface-2); border: 1px solid var(--border);
+                 border-radius: 6px; font-size: 13.5px; line-height: 1.55;
+                 color: var(--ink-1); tab-size: 2;
+                 white-space: pre-wrap; overflow-wrap: anywhere; }
+
   /* The table view the accessibility pass requires. */
   .tableview { display: none; margin-top: 12px; }
   body.show-tables .tableview { display: block; }
@@ -160,6 +179,7 @@
     <span class="spacer"></span>
     <div class="controls">
       <label class="chk"><input type="checkbox" id="tables"> data tables</label>
+      <label class="chk"><input type="checkbox" id="sqlToggle"> SQL</label>
       <button class="chip" id="themeBtn" title="Toggle light and dark">THEME</button>
       <button class="chip" id="modeChip" data-live="0" title="Data source">SNAPSHOT</button>
     </div>
@@ -167,12 +187,21 @@
 
   <div class="grid kpis" id="kpis"></div>
 
+  <div class="grid sqlcard">
+    <div class="card">
+      <h2>The four KPI cards</h2>
+      <p class="note">One query for the figures, one for the sparklines.</p>
+      <div class="sqlview" data-q="kpi,week"></div>
+    </div>
+  </div>
+
   <div class="grid">
     <div class="card">
       <h2>Gross gaming revenue by day</h2>
       <p class="note">EUR, settled bets, all brands. 1 June &ndash; 31 August 2026.</p>
       <div id="ggrChart"></div>
       <div class="tableview scroll" id="ggrTable"></div>
+      <div class="sqlview" data-q="ggrByDay"></div>
     </div>
   </div>
 
@@ -184,12 +213,14 @@
         one large win moves it by tens of points.</p>
       <div id="holdChart"></div>
       <div class="tableview scroll" id="holdTable"></div>
+      <div class="sqlview" data-q="hold"></div>
     </div>
     <div class="card">
       <h2>Hit rate by provider &mdash; 8 July</h2>
       <p class="note">Share of casino bets returning any win. Cash play only.</p>
       <div id="hitChart"></div>
       <div class="tableview scroll" id="hitTable"></div>
+      <div class="sqlview" data-q="hit"></div>
     </div>
   </div>
 
@@ -199,12 +230,14 @@
       <p class="note">8 July against the prior seven-day average. Axis is focused, not zero-based.</p>
       <div id="pspChart"></div>
       <div class="tableview scroll" id="pspTable"></div>
+      <div class="sqlview" data-q="psp"></div>
     </div>
     <div class="card">
       <h2>Bet acceptance latency by brand</h2>
       <p class="note">99th percentile, milliseconds. 8 July against the prior seven-day average.</p>
       <div id="latChart"></div>
       <div class="tableview scroll" id="latTable"></div>
+      <div class="sqlview" data-q="lat"></div>
     </div>
   </div>
 
@@ -214,6 +247,7 @@
       <p class="note">Realised return to player against the advertised figure. One day of
         one game is a few hundred bets, so these swing wildly in both directions by nature.</p>
       <div class="scroll"><table id="gamesTable"></table></div>
+      <div class="sqlview" data-q="games"></div>
     </div>
   </div>
 
@@ -584,7 +618,8 @@ const Q = {
       round(sumIf(stake_eur, toDate(ts)>=${W0} AND toDate(ts)<${D0})/7),
       round(countIf(toDate(ts)>=${W0} AND toDate(ts)<${D0})/7),
       round(uniqExactIf(player_id, toDate(ts)>=${W0} AND toDate(ts)<${D0})/7)
-    FROM igaming.bets WHERE status='settled'`,
+    FROM igaming.bets WHERE status='settled'
+      AND toDate(ts)>=${W0} AND toDate(ts)<=${D0}`,
   week: `SELECT toString(toDate(ts)), round(sum(ggr_eur)), round(sum(stake_eur)),
       count(), uniqExact(player_id)
     FROM igaming.bets WHERE status='settled'
@@ -607,7 +642,8 @@ const Q = {
   lat: `SELECT brand_name,
       round(quantileIf(0.99)(accept_latency_ms, toDate(ts)=${D0})) AS d,
       round(quantileIf(0.99)(accept_latency_ms, toDate(ts)>=${W0} AND toDate(ts)<${D0}))
-    FROM igaming.bets GROUP BY brand_name ORDER BY d DESC`,
+    FROM igaming.bets WHERE toDate(ts)>=${W0} AND toDate(ts)<=${D0}
+    GROUP BY brand_name ORDER BY d DESC`,
   games: `SELECT game_name, provider_id,
       round(100*sum(payout_eur)/sum(stake_eur),1),
       round(100*sum(stake_eur*theoretical_rtp)/sum(stake_eur),1), count()
@@ -677,6 +713,34 @@ $("#auto").addEventListener("change", (e) => {
 });
 $("#tables").addEventListener("change", (e) =>
   document.body.classList.toggle("show-tables", e.target.checked));
+$("#sqlToggle").addEventListener("change", (e) =>
+  document.body.classList.toggle("show-sql", e.target.checked));
+
+// Fill every .sqlview from Q, keyed by data-q. Read straight off the same
+// object goLive() queries with, so the SQL on screen is the SQL that runs.
+// textContent, not innerHTML: these strings contain != and < and must not
+// be parsed as markup.
+function renderSql() {
+  document.querySelectorAll(".sqlview").forEach((box) => {
+    box.replaceChildren();
+    box.dataset.q.split(",").forEach((key) => {
+      const name = document.createElement("div");
+      name.className = "qname";
+      name.textContent = "Q." + key;
+      const pre = document.createElement("pre");
+      // Strip the leading indentation the template literals carry.
+      const lines = Q[key].replace(/^\n/, "").split("\n");
+      const pad = Math.min(...lines.slice(1).filter((l) => l.trim())
+        .map((l) => l.match(/^ */)[0].length));
+      pre.textContent = lines
+        .map((l, i) => (i ? l.slice(pad) : l.trim()))
+        .join("\n")
+        .trimEnd();
+      box.append(name, pre);
+    });
+  });
+}
+renderSql();
 $("#themeBtn").addEventListener("click", () => {
   const cur = document.documentElement.getAttribute("data-theme");
   const dark = cur ? cur === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;

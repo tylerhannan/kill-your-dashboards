@@ -28,7 +28,29 @@ set -euo pipefail
 TIER="${1:-small}"
 RATE="${2:-2000}"
 SQL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sql"
-CH="${CH:-clickhouse}"
+# Same binary search as generate.sh, and for the same reason: `curl
+# https://clickhouse.com/ | sh` drops the binary in the working
+# directory, so check there before PATH. Without this, the README's
+# install flow gives you a binary generate.sh finds and this script
+# does not. Override with CH=/path/to/clickhouse.
+if [[ -n "${CH:-}" ]]; then
+  :
+elif [[ -x ./clickhouse ]]; then
+  CH=./clickhouse
+elif command -v clickhouse >/dev/null 2>&1; then
+  CH=clickhouse
+else
+  cat >&2 <<'EOF'
+No clickhouse binary found.
+
+  curl https://clickhouse.com/ | sh     # drops ./clickhouse here
+
+Or point at one you already have:
+
+  CH=/usr/local/bin/clickhouse ./stream.sh small
+EOF
+  exit 127
+fi
 
 case "$TIER" in
   small)  N_PLAYERS=8000 ;;

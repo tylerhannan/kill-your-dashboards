@@ -163,10 +163,25 @@ done
 printf '\ndone in %ds\n\n' "$((SECONDS - TOTAL_START))"
 
 # Echo back the exact invocation for the target that was actually used,
-# TLS flag included or omitted to match.
+# TLS flag included or omitted to match. Credentials are emitted as the
+# variable names rather than their values, so the line is safe to paste
+# into a shell that already has them exported -- which is the shell you
+# just ran this script from -- and safe to paste anywhere else too.
+# Written as plain `if` blocks rather than `[[ test ]] && VERIFY=...`
+# one-liners. A trailing test that fails makes the whole branch return
+# non-zero, and under `set -e` the script would exit here having printed
+# nothing -- the same trap the TLS comment above describes.
 if [[ -n "${CLICKHOUSE_HOST:-}" ]]; then
   VERIFY="$CH client --host $CLICKHOUSE_HOST"
-  [[ "$SECURE" == "1" ]] && VERIFY="$VERIFY --secure"
+  if [[ "$SECURE" == "1" ]]; then
+    VERIFY="$VERIFY --secure"
+  fi
+  if [[ -n "${CLICKHOUSE_USER:-}" && "${CLICKHOUSE_USER}" != "default" ]]; then
+    VERIFY="$VERIFY --user \"\$CLICKHOUSE_USER\""
+  fi
+  if [[ -n "${CLICKHOUSE_PASSWORD:-}" ]]; then
+    VERIFY="$VERIFY --password \"\$CLICKHOUSE_PASSWORD\""
+  fi
 else
   VERIFY="$CH local --path ./data"
 fi
