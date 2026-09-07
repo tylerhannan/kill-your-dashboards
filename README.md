@@ -11,6 +11,38 @@ built a tile for. Every problem planted in this dataset is invisible to
 any dashboard you would plausibly have built, and obvious within about
 thirty seconds of being able to ask a question in words.
 
+## The five things wrong with it
+
+A provider config push that loosened hit frequency for twelve hours on
+8 July, an in-play latency collapse during the World Cup final, a
+240-account bonus abuse cohort, a payment provider outage, and 1,746
+deposit limit breaches that nothing ever flagged.
+
+Hints and answers are in [`challenges/README.md`](challenges/README.md).
+Read that first if you want to try them cold, because the generator
+files are commented and the SQL is therefore the spoiler.
+
+## The dashboard that misses it
+
+`dashboard/index.html` is a single self-contained file: six tiles of GGR
+by day, hold by brand, hit rate by provider, deposit approval, latency,
+and top games. Every figure on it is accurate.
+
+![The operator dashboard in snapshot mode for 8 July 2026: four KPI
+cards above six tiles. The hit rate by provider tile ranks Redwood last
+of eight at 28.13%, below Sable Studios at
+34.33%.](dashboard/screenshot.png)
+
+None of them find it. The provider tile is worse than useless: it shows
+the culprit with the *lowest* hit rate of any provider that day, because
+it averages twelve broken hours with twelve normal ones and because that
+provider's baseline is genuinely the lowest in the portfolio. The
+dashboard is not wrong. It simply cannot answer a question nobody built
+it for.
+
+Open it directly for baked-in figures, or point it at ClickHouse over
+HTTP to query live. [DEMO.md](DEMO.md) has the running order.
+
 ## Quick start
 
 ```bash
@@ -47,20 +79,6 @@ server, is in [SETUP.md](SETUP.md).
 | [queries/02_beyond_the_dashboard.sql](queries/02_beyond_the_dashboard.sql) | The questions nobody pre-built. The point of the repo. |
 | [queries/03_query_log_fanout.sql](queries/03_query_log_fanout.sql) | Real fan-out from `system.query_log`, after you run the demo. |
 | [sql/10_verify.sql](sql/10_verify.sql) | Every invariant the data should satisfy. Run it after generating. |
-
-## Live data
-
-To keep writing new bets while you query, against a server (not
-`clickhouse-local`, which locks its data directory):
-
-```bash
-clickhousectl local server start
-CLICKHOUSE_HOST=localhost ./generate.sh small
-CLICKHOUSE_HOST=localhost ./stream.sh small 4000
-```
-
-Then ask what happened in the last thirty seconds, twice, and get two
-different answers.
 
 ## Tiers
 
@@ -170,38 +188,19 @@ an agent actually did, two places have the real thing:
 `queries/03_query_log_fanout.sql` measures fan-out from `query_log` after
 you have run the demo.
 
-## The five things wrong with it
+## Live data
 
-See [`challenges/README.md`](challenges/README.md). Short version: a
-provider config push that loosened hit frequency for twelve hours, an
-in-play latency collapse during the World Cup final, a 240-account bonus
-abuse cohort, a payment provider outage, and 1,746 deposit limit
-breaches that nothing ever flagged.
+To keep writing new bets while you query, against a server (not
+`clickhouse-local`, which locks its data directory):
 
-Solutions are in the generator files, which are commented, so the SQL
-is the spoiler. Read `challenges/README.md` first if you want to try
-them cold.
+```bash
+clickhousectl local server start
+CLICKHOUSE_HOST=localhost ./generate.sh small
+CLICKHOUSE_HOST=localhost ./stream.sh small 4000
+```
 
-## The dashboard that misses it
-
-`dashboard/index.html` is a single self-contained file: six tiles of GGR
-by day, hold by brand, hit rate by provider, deposit approval, latency,
-and top games. Every figure on it is accurate.
-
-![The operator dashboard in snapshot mode, showing eight tiles for 8 July
-2026. The hit rate by provider tile ranks Redwood last of eight at
-28.13%, below Sable Studios at
-34.33%.](dashboard/screenshot.png)
-
-None of them find the 8 July problem. The provider tile is worse than
-useless: it shows the culprit with the *lowest* hit rate of any provider
-that day, because it averages twelve broken hours with twelve normal
-ones and because that provider's baseline is genuinely the lowest in the
-portfolio. The dashboard is not wrong. It simply cannot answer a
-question nobody built it for.
-
-Open it directly for baked-in figures, or point it at ClickHouse over
-HTTP to query live. [DEMO.md](DEMO.md) has the running order.
+Then ask what happened in the last thirty seconds, twice, and get two
+different answers.
 
 ## How the generation works
 
