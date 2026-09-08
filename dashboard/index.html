@@ -208,9 +208,9 @@
   <div class="grid halves">
     <div class="card">
       <h2>Hold by brand</h2>
-      <p class="note">GGR as a percentage of turnover, whole period. Hold is a
-        long-run figure &mdash; a single brand-day is roughly ten thousand bets, where
-        one large win moves it by tens of points.</p>
+      <p class="note">GGR as a percentage of turnover, whole quarter. A long-run
+        figure by construction &mdash; each bar averages every day, market and game
+        for that brand.</p>
       <div id="holdChart"></div>
       <div class="tableview scroll" id="holdTable"></div>
       <div class="sqlview" data-q="hold"></div>
@@ -244,8 +244,8 @@
   <div class="grid">
     <div class="card">
       <h2>Top casino games by turnover &mdash; 8 July</h2>
-      <p class="note">Realised return to player against the advertised figure. One day of
-        one game is a few hundred bets, so these swing wildly in both directions by nature.</p>
+      <p class="note">Ranked by turnover. Advertised return to player is the configured
+        catalogue figure for each game.</p>
       <div class="scroll"><table id="gamesTable"></table></div>
       <div class="sqlview" data-q="games"></div>
     </div>
@@ -319,14 +319,15 @@ const SNAP = {
   lat: [["Bluepeak",177,171],["Northstar",169,154],["Vega Casino",163,151],
         ["Tivoli Play",163,162],["Casa Verde",161,153],["Aurora Bet",160,167],
         ["Ironhorse",159,176],["Kestrel",156,156]],
-  games: [["Velvet Kraken Deluxe","Redwood",120.6,92.5,2719],
-          ["Sacred Reels Cash Drop","Atlas Originals",106.0,94.6,1013],
-          ["Wild Anvil Megaways","Atlas Originals",117.2,92.6,940],
-          ["Crimson Anvil II","Nordic Reels",122.6,97.0,410],
-          ["Gold Reels Gigablox","Panther Gaming",5.4,94.9,296],
-          ["Frozen Compass","Lumen Live",92.1,95.1,276],
-          ["Gold Reels Hold & Win","Nordic Reels",216.7,94.9,204],
-          ["Gold Harvest Gigablox","Kite Interactive",57.9,93.5,161]]
+  /* [game, provider, advertised RTP, bets] */
+  games: [["Velvet Kraken Deluxe","Redwood",92.5,2719],
+          ["Sacred Reels Cash Drop","Atlas Originals",94.6,1013],
+          ["Wild Anvil Megaways","Atlas Originals",92.6,940],
+          ["Crimson Anvil II","Nordic Reels",97.0,410],
+          ["Gold Reels Gigablox","Panther Gaming",94.9,296],
+          ["Frozen Compass","Lumen Live",95.1,276],
+          ["Gold Reels Hold & Win","Nordic Reels",94.9,204],
+          ["Gold Harvest Gigablox","Kite Interactive",93.5,161]]
 };
 
 /* ============================================================ */
@@ -571,11 +572,11 @@ function renderDumbbell(mount, rows, fmt, label, unit) {
 
 function renderGames(rows) {
   $("#gamesTable").innerHTML =
-    "<thead><tr><th>Game</th><th>Provider</th><th class='num'>Realised RTP</th>" +
-    "<th class='num'>Advertised</th><th class='num'>Bets</th></tr></thead><tbody>" +
+    "<thead><tr><th>Game</th><th>Provider</th>" +
+    "<th class='num'>Advertised RTP</th><th class='num'>Bets</th></tr></thead><tbody>" +
     rows.map((r) => "<tr><td>" + r[0] + "</td><td>" + r[1] + "</td>" +
-      '<td class="num">' + r[2].toFixed(1) + "%</td><td class=\"num\">" +
-      r[3].toFixed(1) + '%</td><td class="num">' + num(r[4]) + "</td></tr>").join("") +
+      '<td class="num">' + r[2].toFixed(1) + '%</td><td class="num">' +
+      num(r[3]) + "</td></tr>").join("") +
     "</tbody>";
 }
 
@@ -617,7 +618,13 @@ const Q = {
       round(sumIf(ggr_eur, toDate(ts)>=${W0} AND toDate(ts)<${D0})/7),
       round(sumIf(stake_eur, toDate(ts)>=${W0} AND toDate(ts)<${D0})/7),
       round(countIf(toDate(ts)>=${W0} AND toDate(ts)<${D0})/7),
-      round(uniqIf(player_id, toDate(ts)>=${W0} AND toDate(ts)<${D0})/7)
+      /* uniq is not additive. A seven-day distinct count divided by seven
+         counts a returning player once and understates the daily average,
+         so the baseline needs its own shape of query. */
+      (SELECT round(avg(u)) FROM (
+        SELECT uniq(player_id) AS u FROM igaming.bets
+        WHERE status='settled' AND toDate(ts)>=${W0} AND toDate(ts)<${D0}
+        GROUP BY toDate(ts)))
     FROM igaming.bets WHERE status='settled'
       AND toDate(ts)>=${W0} AND toDate(ts)<=${D0}`,
   week: `SELECT toString(toDate(ts)), round(sum(ggr_eur)), round(sum(stake_eur)),
@@ -645,7 +652,6 @@ const Q = {
     FROM igaming.bets WHERE toDate(ts)>=${W0} AND toDate(ts)<=${D0}
     GROUP BY brand_name ORDER BY d DESC`,
   games: `SELECT game_name, provider_id,
-      round(100*sum(payout_eur)/sum(stake_eur),1),
       round(100*sum(stake_eur*theoretical_rtp)/sum(stake_eur),1), count()
     FROM igaming.bets WHERE vertical='casino' AND status='settled' AND toDate(ts)=${D0}
     GROUP BY game_name, provider_id HAVING count()>150
@@ -681,7 +687,7 @@ async function goLive() {
              ggr7: r[4], turnover7: r[5], bets7: r[6], players7: r[7] },
       week: N(out[1]), ggrByDay: N(out[2]), hold: N(out[3]), hit: N(out[4]),
       psp: N(out[5]), lat: N(out[6]),
-      games: out[7].map((x) => [x[0], x[1], Number(x[2]), Number(x[3]), Number(x[4])]),
+      games: out[7].map((x) => [x[0], x[1], Number(x[2]), Number(x[3])]),
     });
     const chip = $("#modeChip");
     chip.textContent = "LIVE"; chip.dataset.live = "1";
