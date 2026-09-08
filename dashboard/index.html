@@ -613,23 +613,23 @@ const D0 = "'2026-07-08'", W0 = "'2026-07-01'";
 const Q = {
   kpi: `SELECT
       round(sumIf(ggr_eur, toDate(ts)=${D0})), round(sumIf(stake_eur, toDate(ts)=${D0})),
-      countIf(toDate(ts)=${D0}), uniqExactIf(player_id, toDate(ts)=${D0}),
+      countIf(toDate(ts)=${D0}), uniqIf(player_id, toDate(ts)=${D0}),
       round(sumIf(ggr_eur, toDate(ts)>=${W0} AND toDate(ts)<${D0})/7),
       round(sumIf(stake_eur, toDate(ts)>=${W0} AND toDate(ts)<${D0})/7),
       round(countIf(toDate(ts)>=${W0} AND toDate(ts)<${D0})/7),
-      round(uniqExactIf(player_id, toDate(ts)>=${W0} AND toDate(ts)<${D0})/7)
+      round(uniqIf(player_id, toDate(ts)>=${W0} AND toDate(ts)<${D0})/7)
     FROM igaming.bets WHERE status='settled'
       AND toDate(ts)>=${W0} AND toDate(ts)<=${D0}`,
   week: `SELECT toString(toDate(ts)), round(sum(ggr_eur)), round(sum(stake_eur)),
-      count(), uniqExact(player_id)
+      count(), uniq(player_id)
     FROM igaming.bets WHERE status='settled'
       AND toDate(ts)>=${W0} AND toDate(ts)<=${D0}
     GROUP BY toDate(ts) ORDER BY toDate(ts)`,
-  ggrByDay: `SELECT toString(toDate(ts)), round(sum(ggr_eur)) FROM igaming.bets
-    WHERE status='settled' AND ts >= '2026-06-01' AND ts < '2026-09-01'
-    GROUP BY toDate(ts) ORDER BY toDate(ts)`,
+  ggrByDay: `SELECT toString(d), round(sum(ggr_eur)) FROM igaming.ggr_rollup
+    WHERE d >= '2026-06-01' AND d < '2026-09-01'
+    GROUP BY d ORDER BY d`,
   hold: `SELECT brand_name, round(100*sum(ggr_eur)/sum(stake_eur),2) AS h
-    FROM igaming.bets WHERE status='settled' GROUP BY brand_name ORDER BY h DESC`,
+    FROM igaming.ggr_rollup GROUP BY brand_name ORDER BY h DESC`,
   hit: `SELECT provider_id, round(100*countIf(payout_eur>0)/count(),2) AS h
     FROM igaming.bets WHERE vertical!='sportsbook' AND status='settled'
       AND NOT is_bonus AND toDate(ts)=${D0}

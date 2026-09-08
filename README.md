@@ -112,6 +112,7 @@ silently invalidates every session-level metric in the dataset.
 | `payments` | 25M | Deposits and withdrawals, by provider and method |
 | `sessions` | ~30M | One row per login, including logins with no bets |
 | `rg_events` | ~3M | Responsible gaming: limits, cool-offs, exclusions, flags |
+| `ggr_rollup` | 750 | GGR and turnover per day per brand. What the dashboard's two whole-period tiles read instead of `bets`. |
 | `players`, `games`, `markets`, `brands`, `fx_rates` | small | Reference data |
 
 ### The wide table
@@ -188,20 +189,6 @@ an agent actually did, two places have the real thing:
 `queries/03_query_log_fanout.sql` measures fan-out from `query_log` after
 you have run the demo.
 
-## Live data
-
-To keep writing new bets while you query, against a server (not
-`clickhouse-local`, which locks its data directory):
-
-```bash
-clickhousectl local server start
-CLICKHOUSE_HOST=localhost ./generate.sh small
-CLICKHOUSE_HOST=localhost ./stream.sh small 4000
-```
-
-Then ask what happened in the last thirty seconds, twice, and get two
-different answers.
-
 ## How the generation works
 
 Everything derives from row numbers through `cityHash64`, so a given
@@ -223,9 +210,10 @@ seconds apart. Drawing a timestamp per bet instead gives about 1.1 bets
 per session, and every session metric built on that is meaningless.
 
 Run the files in numeric order, or just use `generate.sh`. Order matters
-in two places: the abuse cohort is inserted before sessions are derived
-from bets, and responsible gaming events are derived after both payments
-and sessions exist.
+in three places: the abuse cohort is inserted before sessions are derived
+from bets, responsible gaming events are derived after both payments and
+sessions exist, and the dashboard rollup is built last so it includes the
+cohort's bets rather than silently omitting them.
 
 ## Known limitations
 

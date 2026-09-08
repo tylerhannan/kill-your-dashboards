@@ -119,10 +119,12 @@ printf 'target    %s\n' "$TARGET"
 printf 'bets      %s\n' "$(printf "%'d" "$N_BETS")"
 printf 'players   %s\n\n' "$(printf "%'d" "$N_PLAYERS")"
 
-# Order matters twice over. The bonus abuse cohort is inserted before
-# sessions are derived, or its bets carry session_ids that no session
-# row matches. Responsible gaming events are derived from payments and
-# sessions, so they come after both.
+# Order matters three times over. The bonus abuse cohort is inserted
+# before sessions are derived, or its bets carry session_ids that no
+# session row matches. Responsible gaming events are derived from
+# payments and sessions, so they come after both. The dashboard rollup
+# aggregates bets, so it goes last -- built any earlier and it omits the
+# cohort's 72,000 bets while every other tile counts them.
 STEPS=(
   00_functions:"deterministic helpers"
   01_tables:"tables, projection, skip index"
@@ -133,6 +135,7 @@ STEPS=(
   06_anomalies:"bonus abuse cohort"
   07_sessions:"sessions"
   08_rg_events:"responsible gaming"
+  09_rollup:"dashboard rollup"
 )
 
 TOTAL_START=$SECONDS
