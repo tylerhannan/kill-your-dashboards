@@ -160,7 +160,7 @@ SETTINGS index_granularity = 8192;
 -- a projection (https://clickhouse.com/docs/data-modeling/projections)
 -- when a *secondary* pattern is still slow afterwards, and
 -- validate it against production-scale data before committing, because
--- projections are not free. This one roughly doubles the table's
+-- projections are not free. This one adds about half again to the table's
 -- footprint, adds work on every insert, and at scale the planner spends
 -- time evaluating it.
 --

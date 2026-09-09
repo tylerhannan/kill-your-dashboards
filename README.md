@@ -86,17 +86,25 @@ server, is in [SETUP.md](SETUP.md).
 |---|---|---|---|---|---|
 | `small` | 10M | 8,000 | ~400MB | ~5s on a laptop | Laptop. Four of the five anomalies are findable. |
 | `medium` | 1B | 800,000 | ~45GB | minutes | All five, including the ones that need statistical power. |
-| `large` | 10B | 8,000,000 | ~525GB | ~66 min | Cloud. The 240-account abuse cohort is genuinely buried. |
+| `large` | 10B | 8,000,000 | ~600GB | ~66 min | Cloud. The 240-account abuse cohort is genuinely buried. |
 
 `small` and `large` are measured. `medium` is interpolated between them
 and is the only figure in that table still worth distrusting. The
 `large` row is a real build: nine steps in 3,932s against a single Cloud
 replica autoscaling between 64 and 356GB, of which `bets` alone was
-3,754s at roughly 3M rows/sec. Do not scale the disk figure linearly
-from `small` — bytes per row grows from 40.8 to 55.0 across the tiers,
-because `player_id` and `session_id` stop being low-cardinality once
-there are eight million players rather than eight thousand.
-[SETUP.md](SETUP.md) has the per-table breakdown.
+3,754s at roughly 3M rows/sec.
+
+At `large`, `bets` is **373.6 GiB** compressed against 1.19 TiB
+uncompressed — a ratio of 3.3 to 1, or **40.1 bytes per row across 43
+columns**, which is under a byte per column. Its `bets_by_player`
+projection is accounted separately at **169.5 GiB**, so the table and its
+projection are 543 GiB together. Everything else in the database is a
+rounding error beside that.
+
+Do not scale the disk figure linearly from `small`, which is 40.8 bytes
+per row: `player_id` and `session_id` stop being low-cardinality once
+there are eight million players rather than eight thousand, and they come
+to dominate the table. [SETUP.md](SETUP.md) has the per-table breakdown.
 
 Player counts scale with bet counts on purpose: `n_players = n_bets /
 1250`. That keeps bets per player near what an operator really sees over

@@ -340,18 +340,44 @@ though the `log_queries` setting reads 1. `clickhouse-local` has no
 |---|---|---|---|---|
 | `small` | 10M | ~400MB | 40.8 | ~5s on a laptop, 13s to Cloud |
 | `medium` | 1B | ~45GB | ~48 | minutes |
-| `large` | 10B | ~525GB | 55.0 | ~66 min, 1 replica at 64–356GB |
+| `large` | 10B | ~600GB | 58.3 | ~66 min, 1 replica at 64–356GB |
 
 `small` and `large` are measured. `medium` is interpolated between them
 and is the one number here still worth distrusting.
 
-Do not scale the disk figure linearly from `small`: bytes per row grows
-with the tier, from 40.8 to 55.0, because player and session identifiers
-are what dominate `bets` once they stop being low-cardinality. `small`
+The `large` bytes/row figure counts `bets` **and** its projection, which
+is what you pay for on disk. Measured on Cloud, 9 September:
+
+| | Compressed | Uncompressed | Ratio | Bytes/row |
+|---|---|---|---|---|
+| `bets` | 373.6 GiB | 1.19 TiB | 3.3 | 40.1 |
+| `bets_by_player` projection | 169.5 GiB | | | 18.2 |
+| Together | 543.1 GiB | | | 58.3 |
+
+40.1 bytes per row across 43 columns is under a byte per column, which is
+the denormalisation argument in one number.
+
+Do not scale the disk figure linearly from `small`: player and session
+identifiers dominate `bets` once they stop being low-cardinality. `small`
 has 8,000 players, `large` has 8,000,000, so `player_id` and
-`session_id` compress far less well at the top tier. Extrapolating
-`small` linearly gives about 400GB for `large` and the real answer is
-525GB.
+`session_id` compress far less well at the top tier.
+
+**Two caveats on these numbers.** They come from `system.parts` and
+`system.projection_parts`; Cloud reports per-*column* byte counts as
+zero, so the per-column figures elsewhere in this repo were measured on
+`clickhouse-local` instead. And the base table has grown about 8.6% since
+the build-time measurement below — 373.6 GiB against 344 — which is worth
+re-checking against `_row_exists` if lightweight deletes have been run on
+the service, since those materialise a new column.
+
+To reproduce:
+
+```sql
+SELECT table, formatReadableSize(sum(data_compressed_bytes)) AS compressed,
+       formatReadableQuantity(sum(rows)) AS rows
+FROM system.parts WHERE database = 'igaming' AND active
+GROUP BY table ORDER BY sum(data_compressed_bytes) DESC;
+```
 
 The `large` generation time above is the whole nine-step run against a
 single replica. Almost all of it is `bets`: 3754s of 3932s, at roughly
@@ -360,9 +386,18 @@ billion rows into 308M sessions in 114s, which is the step people expect
 to be slow and isn't.
 
 The `bets_by_player` projection adds about half again to the `bets`
-table's footprint, not double: at `large` it is 170GB of the table's
-514GB, against 344GB for the base table. It is worth it for
-player-centric lookups, but if you are tight on disk, drop it:
+table's footprint, not double: 169.5 GiB against the base table's 373.6.
+
+It is smaller than the base table for a reason worth knowing. The
+projection is `SELECT * ORDER BY (player_id, ts)`, so it groups each
+player's rows together and the denormalised player attributes — country,
+VIP tier, KYC status, registration date — become long runs of identical
+values that compress to almost nothing. The base table's
+`(brand_id, vertical, ts)` ordering scatters them. Same columns, same
+data, 45% of the size, purely from sort order.
+
+Worth it for player-centric lookups, but if you are tight on disk, drop
+it:
 
 ```sql
 ALTER TABLE igaming.bets DROP PROJECTION bets_by_player;
